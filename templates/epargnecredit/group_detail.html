@@ -187,14 +187,100 @@
           </tr>
         {% endfor %}
       </tbody>
+<tfoot>
 
-      <tfoot>
-        <tr class="fw-bold table-light">
-          <td colspan="2" class="text-end">Total cotisations</td>
-          <td>{{ total_montant|floatformat:0|intcomma }} FCFA</td>
-          <td></td> {# ← corrige le colspan pour 4 colonnes #}
-        </tr>
-      </tfoot>
+  <!-- Total des cotisations -->
+  <tr class="table-light">
+    <td colspan="2" class="text-end fw-bold">
+      Total cotisations
+    </td>
+
+    <td class="fw-bold text-primary text-nowrap">
+      {{ total_montant|default_if_none:0|floatformat:0|intcomma }} FCFA
+    </td>
+
+    <td></td>
+  </tr>
+
+  <!-- Total des intérêts -->
+  <tr>
+    <td colspan="2" class="text-end fw-semibold">
+      Total intérêts
+    </td>
+
+    <td
+      class="fw-bold text-nowrap
+      {% if total_interets > 0 %}
+        text-success
+      {% else %}
+        text-muted
+      {% endif %}"
+    >
+      {% if total_interets > 0 %}
+        + {{ total_interets|floatformat:0|intcomma }} FCFA
+      {% else %}
+        0 FCFA
+      {% endif %}
+    </td>
+
+    <td>
+      {% if total_interets <= 0 %}
+        <small class="text-muted">
+          Aucun intérêt actif
+        </small>
+      {% endif %}
+    </td>
+  </tr>
+
+  <!-- Total des pénalités -->
+  <tr>
+    <td colspan="2" class="text-end fw-semibold">
+      Pénalités de retard appliquées
+    </td>
+
+    <td
+      class="fw-bold text-nowrap
+      {% if total_penalites > 0 %}
+        text-danger
+      {% else %}
+        text-muted
+      {% endif %}"
+    >
+      {% if total_penalites > 0 %}
+        + {{ total_penalites|floatformat:0|intcomma }} FCFA
+      {% else %}
+        0 FCFA
+      {% endif %}
+    </td>
+
+    <td>
+      {% if total_penalites > 0 %}
+        <small class="text-danger">
+          Retard constaté
+        </small>
+      {% else %}
+        <small class="text-muted">
+          Aucun retard
+        </small>
+      {% endif %}
+    </td>
+  </tr>
+
+  <!-- Total général -->
+  <tr class="table-warning">
+    <td colspan="2" class="text-end fw-bold fs-5">
+      Total général
+    </td>
+
+    <td class="fw-bold fs-5 text-nowrap">
+      {{ total_general|default_if_none:0|floatformat:0|intcomma }} FCFA
+    </td>
+
+    <td></td>
+  </tr>
+
+</tfoot>
+
     </table>
   </div>
 
@@ -378,4 +464,3 @@
 
 </div>
 {% endblock %}
-

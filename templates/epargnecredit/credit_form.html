@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load widget_tweaks %}
 
 {% block title %}Demander un crédit{% endblock %}
@@ -6,102 +6,119 @@
 {% block content %}
 <div class="container py-4">
 
-<div class="row justify-content-center">
-<div class="col-lg-6 col-md-8 col-12">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8 col-12">
 
-<h3 class="fw-bold text-primary mb-4">
-💳 Demander un crédit
-</h3>
+            <h3 class="fw-bold text-primary mb-4">
+                💳 Demander un crédit
+            </h3>
 
-<div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
 
-<div class="card-body">
+                    <form
+                        method="post"
+                        class="needs-validation"
+                        novalidate
+                    >
+                        {% csrf_token %}
 
-<form method="post" class="needs-validation" novalidate>
+                        {% if form.non_field_errors %}
+                            <div
+                                class="alert alert-danger"
+                                role="alert"
+                            >
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-{% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-3">
 
-{% for field in form %}
+                                <label
+                                    for="{{ field.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ field.label }}
 
-<div class="mb-3">
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
 
-<label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                {% if field.errors %}
+                                    {{ field|add_class:"form-control form-control-lg is-invalid" }}
+                                {% else %}
+                                    {{ field|add_class:"form-control form-control-lg" }}
+                                {% endif %}
 
-{{ field.label }}
+                                {% if field.help_text %}
+                                    <div class="form-text">
+                                        {{ field.help_text|safe }}
+                                    </div>
+                                {% endif %}
 
-{% if field.field.required %}
-<span class="text-danger">*</span>
-{% endif %}
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in field.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
 
-</label>
+                            </div>
+                        {% endfor %}
 
-{{ field|add_class:"form-control form-control-lg" }}
+                        <div class="d-flex flex-wrap gap-2 mt-4">
 
-{% if field.help_text %}
-<div class="form-text">
-{{ field.help_text }}
+                            <button
+                                type="submit"
+                                class="btn btn-primary btn-lg flex-grow-1"
+                            >
+                                📩 Envoyer la demande
+                            </button>
+
+                            <a
+                                href="{{ cancel_url|default:'javascript:history.back()' }}"
+                                class="btn btn-outline-secondary btn-lg flex-grow-1"
+                            >
+                                Annuler
+                            </a>
+
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
 </div>
-{% endif %}
-
-{% if field.errors %}
-<div class="invalid-feedback d-block">
-{% for error in field.errors %}
-{{ error }}
-{% endfor %}
-</div>
-{% endif %}
-
-</div>
-
-{% endfor %}
-
-<div class="d-flex flex-wrap gap-2 mt-4">
-
-<button type="submit"
-class="btn btn-info flex-grow-1">
-
-📩 Envoyer la demande
-
-</button>
-
-<a href="{{ cancel_url }}"
-class="btn btn-outline-secondary flex-grow-1">
-
-Annuler
-
-</a>
-
-</div>
-
-</form>
-
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-
 
 <script>
-(() => {
-'use strict'
-const forms = document.querySelectorAll('.needs-validation')
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
 
-Array.from(forms).forEach(form => {
-form.addEventListener('submit', event => {
+    const forms = document.querySelectorAll(".needs-validation");
 
-if (!form.checkValidity()) {
-event.preventDefault()
-event.stopPropagation()
-}
+    Array.from(forms).forEach(function (form) {
+        form.addEventListener(
+            "submit",
+            function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
 
-form.classList.add('was-validated')
-
-}, false)
-})
-})();
+                form.classList.add("was-validated");
+            },
+            false
+        );
+    });
+});
 </script>
-
 {% endblock %}

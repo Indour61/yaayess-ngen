@@ -6,150 +6,349 @@
 {% block content %}
 <div class="container py-4">
 
-<!-- Titre -->
-<div class="mb-3">
-  <h3 class="fw-bold text-success mb-1">
-    💳 Remboursement du prêt
-  </h3>
-  <p class="text-muted mb-0">
-    Groupe : <strong>{{ group.nom }}</strong>
-  </p>
-</div>
+  <!-- ================================================== -->
+  <!-- Titre et navigation -->
+  <!-- ================================================== -->
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
 
+    <div>
+      <h3 class="fw-bold text-success mb-1">
+        💳 Remboursement du prêt
+      </h3>
 
-<!-- Messages -->
-{% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }} shadow-sm">
-      {{ message|safe }}
+      <p class="text-muted mb-0">
+        Groupe :
+        <strong>{{ group.nom }}</strong>
+      </p>
     </div>
-  {% endfor %}
-{% endif %}
 
-
-<!-- Infos prêt -->
-<div class="card shadow-sm border-0 mb-4">
-  <div class="card-body">
-
-    <div class="row g-3">
-
-      <div class="col-md-3 col-6">
-        <div class="small text-muted">Bénéficiaire</div>
-        <div class="fw-semibold">
-          {{ demande.member.user.nom|default:demande.member.user.phone }}
-        </div>
-      </div>
-
-      <div class="col-md-3 col-6">
-        <div class="small text-muted">Montant total</div>
-        <div class="fw-bold text-primary">
-          {{ total|floatformat:0|intcomma }} FCFA
-        </div>
-      </div>
-
-      <div class="col-md-3 col-6">
-        <div class="small text-muted">Mensualité</div>
-        <div>
-          <strong>{{ mensualite|floatformat:0|intcomma }} FCFA</strong>
-          <div class="small text-muted">{{ demande.nb_mois }} mois</div>
-        </div>
-      </div>
-
-      <div class="col-md-3 col-6">
-        <div class="small text-muted">Début remboursement</div>
-        <div class="fw-semibold">
-          {{ demande.debut_remboursement|date:"d/m/Y" }}
-        </div>
-      </div>
-
-    </div>
+    <a
+      href="{% url 'epargnecredit:group_detail' group.id %}"
+      class="btn btn-outline-secondary"
+    >
+      ⬅️ Retour au groupe
+    </a>
 
   </div>
-</div>
 
+  <!-- ================================================== -->
+  <!-- Messages Django -->
+  <!-- ================================================== -->
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div
+          class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm"
+          role="alert"
+        >
+          {{ message|safe }}
 
-<!-- Répartition -->
-<h5 class="fw-semibold mb-3">
-👥 Répartition — {{ nb_membres }} membre{{ nb_membres|pluralize }}
-</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Fermer"
+          ></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
+  <!-- ================================================== -->
+  <!-- Informations du prêt -->
+  <!-- ================================================== -->
+  <div class="card shadow-sm border-0 mb-4">
 
-<div class="table-responsive shadow-sm rounded">
+    <div class="card-header bg-light fw-bold">
+      📋 Informations du prêt
+    </div>
 
-<table class="table table-hover align-middle mb-0">
+    <div class="card-body">
 
-<thead class="table-light">
-<tr>
-<th>Membre</th>
-<th class="text-end">Part totale</th>
-<th class="text-end">Part mensuelle</th>
-<th>Téléphone</th>
-<th class="text-center">Actions</th>
-</tr>
-</thead>
+      <div class="row g-4">
 
-<tbody>
+        <!-- Bénéficiaire -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Bénéficiaire
+          </div>
 
-{% for r in repartition %}
+          <div class="fw-semibold">
+            {{ demande.member.user.nom|default:demande.member.user.phone }}
+          </div>
+        </div>
 
-<tr>
+        <!-- Capital emprunté -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Capital emprunté
+          </div>
 
-<td>
-<strong>
-{{ r.member.user.nom|default:r.member.user.phone }}
-</strong>
-</td>
+          <div class="fw-bold">
+            {{ demande.montant|default_if_none:0|floatformat:0|intcomma }}
+            FCFA
+          </div>
+        </div>
 
-<td class="text-end">
-{{ r.part_totale|floatformat:0|intcomma }} FCFA
-</td>
+        <!-- Intérêt -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Taux d’intérêt
+          </div>
 
-<td class="text-end text-primary fw-semibold">
-{{ r.part_mensuelle|floatformat:0|intcomma }} FCFA
-</td>
+          <div class="fw-bold text-success">
+            {{ demande.interet|default_if_none:0|floatformat:2 }} %
+          </div>
+        </div>
 
-<td>
-{{ r.member.user.phone }}
-</td>
+        <!-- Pénalité -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Pénalité en cas de retard
+          </div>
 
-<td class="text-center">
+          <div class="fw-bold text-danger">
+            {{ demande.penalite|default_if_none:0|floatformat:2 }} %
+          </div>
 
-<button class="btn btn-sm btn-outline-success" disabled>
-💰 Enregistrer
-</button>
+          <small class="text-muted">
+            Non appliquée sans retard
+          </small>
+        </div>
 
-</td>
+        <!-- Total à rembourser -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Capital + intérêts
+          </div>
 
-</tr>
+          <div class="fw-bold text-primary">
+            {{ total|default_if_none:0|floatformat:0|intcomma }}
+            FCFA
+          </div>
+        </div>
 
-{% empty %}
+        <!-- Mensualité -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Mensualité
+          </div>
 
-<tr>
-<td colspan="5" class="text-center text-muted py-3">
-Aucun membre dans la répartition
-</td>
-</tr>
+          <div class="fw-bold">
+            {{ mensualite|default_if_none:0|floatformat:0|intcomma }}
+            FCFA
+          </div>
 
-{% endfor %}
+          <small class="text-muted">
+            Sur {{ demande.nb_mois }} mois
+          </small>
+        </div>
 
-</tbody>
+        <!-- Début -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Début du remboursement
+          </div>
 
-</table>
+          <div class="fw-semibold">
+            {{ demande.debut_remboursement|date:"d/m/Y" }}
+          </div>
+        </div>
 
-</div>
+        <!-- Statut -->
+        <div class="col-lg-3 col-md-4 col-6">
+          <div class="small text-muted mb-1">
+            Statut
+          </div>
 
+          {% if demande.statut == "APPROVED" %}
+            <span class="badge bg-success">
+              Prêt actif
+            </span>
+          {% elif demande.statut == "CLOSED" %}
+            <span class="badge bg-secondary">
+              Prêt soldé
+            </span>
+          {% elif demande.statut == "PENDING" %}
+            <span class="badge bg-warning text-dark">
+              En attente
+            </span>
+          {% elif demande.statut == "REJECTED" %}
+            <span class="badge bg-danger">
+              Refusé
+            </span>
+          {% else %}
+            <span class="badge bg-light text-dark">
+              {{ demande.get_statut_display|default:demande.statut }}
+            </span>
+          {% endif %}
+        </div>
 
-<!-- Navigation -->
-<div class="mt-4">
+      </div>
 
-<a href="{% url 'epargnecredit:group_detail' group.id %}"
-class="btn btn-outline-secondary">
+    </div>
+  </div>
 
-⬅️ Retour au groupe
+  <!-- ================================================== -->
+  <!-- Répartition -->
+  <!-- ================================================== -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
-</a>
+    <h5 class="fw-semibold mb-0">
+      👥 Répartition du remboursement
+    </h5>
 
-</div>
+    <span class="badge bg-primary">
+      {{ nb_membres }} membre{{ nb_membres|pluralize }}
+    </span>
+
+  </div>
+
+  <div class="table-responsive shadow-sm rounded">
+
+    <table class="table table-hover table-bordered align-middle mb-0">
+
+      <thead class="table-light">
+        <tr>
+          <th>Membre</th>
+          <th class="text-end">Part totale</th>
+          <th class="text-end">Part mensuelle</th>
+          <th>Téléphone</th>
+          <th class="text-center">Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for r in repartition %}
+          <tr>
+
+            <!-- Membre -->
+            <td>
+              <strong>
+                {{ r.member.user.nom|default:r.member.user.phone }}
+              </strong>
+
+              {% if r.member.user == group.admin %}
+                <span class="badge bg-success ms-1">
+                  Admin
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Part totale -->
+            <td class="text-end fw-semibold">
+              {{ r.part_totale|default_if_none:0|floatformat:0|intcomma }}
+              FCFA
+            </td>
+
+            <!-- Part mensuelle -->
+            <td class="text-end text-primary fw-bold">
+              {{ r.part_mensuelle|default_if_none:0|floatformat:0|intcomma }}
+              FCFA
+            </td>
+
+            <!-- Téléphone -->
+            <td>
+              {% if r.member.user.phone %}
+                <a
+                  href="tel:{{ r.member.user.phone }}"
+                  class="text-decoration-none"
+                >
+                  {{ r.member.user.phone }}
+                </a>
+              {% else %}
+                <span class="text-muted">Non renseigné</span>
+              {% endif %}
+            </td>
+
+            <!-- Action -->
+            <td class="text-center">
+
+              {% if demande.statut == "APPROVED" %}
+                <a
+                  href="{% url 'epargnecredit:initier_paiement_remboursement' r.member.id %}"
+                  class="btn btn-sm btn-success"
+                >
+                  💰 Enregistrer
+                </a>
+
+              {% elif demande.statut == "CLOSED" %}
+                <span class="badge bg-success">
+                  ✅ Soldé
+                </span>
+
+              {% else %}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  disabled
+                >
+                  Indisponible
+                </button>
+              {% endif %}
+
+            </td>
+
+          </tr>
+
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              Aucun membre dans la répartition.
+            </td>
+          </tr>
+        {% endfor %}
+
+      </tbody>
+
+      {% if repartition %}
+        <tfoot class="table-light fw-bold">
+
+          <tr>
+            <td class="text-end">
+              Total
+            </td>
+
+            <td class="text-end">
+              {{ total_repartition|default:total|floatformat:0|intcomma }}
+              FCFA
+            </td>
+
+            <td class="text-end">
+              {{ total_mensualites|default:mensualite|floatformat:0|intcomma }}
+              FCFA
+            </td>
+
+            <td colspan="2"></td>
+          </tr>
+
+        </tfoot>
+      {% endif %}
+
+    </table>
+
+  </div>
+
+  <!-- ================================================== -->
+  <!-- Informations sur les pénalités -->
+  <!-- ================================================== -->
+  <div class="alert alert-light border mt-4 mb-0">
+
+    <div class="fw-semibold mb-1">
+      ℹ️ Règle concernant les pénalités
+    </div>
+
+    <small class="text-muted">
+      Le taux de pénalité de
+      <strong>
+        {{ demande.penalite|default_if_none:0|floatformat:2 }} %
+      </strong>
+      est appliqué uniquement lorsqu’une échéance de remboursement est
+      réellement en retard.
+    </small>
+
+  </div>
 
 </div>
 {% endblock %}

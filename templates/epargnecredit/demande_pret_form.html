@@ -7,156 +7,244 @@
 {% block content %}
 <div class="container py-4">
 
-<div class="row justify-content-center">
-<div class="col-lg-6 col-md-8 col-12">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8 col-12">
 
-<h3 class="fw-bold text-primary mb-3">
-💳 Demande de prêt
-</h3>
+            <h3 class="fw-bold text-primary mb-3">
+                💳 Demande de prêt
+            </h3>
 
-<p class="text-muted mb-4">
-Membre : <strong>{{ member.user.nom|default:member.user.phone }}</strong><br>
-Groupe : <strong>{{ group.nom }}</strong>
-</p>
+            <p class="text-muted mb-4">
+                Membre :
+                <strong>
+                    {{ member.user.nom|default:member.user.phone }}
+                </strong>
+                <br>
 
+                Groupe :
+                <strong>{{ group.nom }}</strong>
+            </p>
 
-<!-- Messages -->
-{% if messages %}
-<div class="mb-3">
-{% for message in messages %}
-<div class="alert alert-{{ message.tags|default:'info' }} shadow-sm">
-{{ message|safe }}
-</div>
-{% endfor %}
-</div>
-{% endif %}
+            <!-- Messages -->
+            {% if messages %}
+                <div class="mb-3">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags|default:'info' }} shadow-sm">
+                            {{ message|safe }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
 
-<div class="card shadow-sm border-0">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
 
-<div class="card-body">
+                        <!-- Montant -->
+                        <div class="mb-3">
 
-<form method="post" novalidate>
+                            <label
+                                class="form-label fw-semibold"
+                                for="{{ form.montant.id_for_label }}"
+                            >
+                                Montant (FCFA)
+                                {% if form.montant.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
 
-{% csrf_token %}
+                            {% if form.montant.errors %}
+                                {{ form.montant|add_class:"form-control form-control-lg is-invalid" }}
+                            {% else %}
+                                {{ form.montant|add_class:"form-control form-control-lg" }}
+                            {% endif %}
 
+                            {% if form.montant.help_text %}
+                                <div class="form-text">
+                                    {{ form.montant.help_text }}
+                                </div>
+                            {% endif %}
 
-<!-- Montant -->
-<div class="mb-3">
+                            {% for error in form.montant.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
 
-<label class="form-label fw-semibold"
-for="{{ form.montant.id_for_label }}">
+                        </div>
 
-Montant (FCFA)
+                        <!-- Intérêt -->
+                        <div class="mb-3">
 
-</label>
+                            <label
+                                class="form-label fw-semibold"
+                                for="{{ form.interet.id_for_label }}"
+                            >
+                                Intérêt (%)
+                                {% if form.interet.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
 
-{{ form.montant|add_class:"form-control form-control-lg" }}
+                            {% if form.interet.errors %}
+                                {{ form.interet|add_class:"form-control form-control-lg is-invalid" }}
+                            {% else %}
+                                {{ form.interet|add_class:"form-control form-control-lg" }}
+                            {% endif %}
 
-{% if form.montant.errors %}
-<div class="invalid-feedback d-block">
-{{ form.montant.errors }}
-</div>
-{% endif %}
+                            {% if form.interet.help_text %}
+                                <div class="form-text">
+                                    {{ form.interet.help_text }}
+                                </div>
+                            {% endif %}
 
-</div>
+                            {% for error in form.interet.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
 
+                        </div>
 
-<!-- Intérêt -->
-<div class="mb-3">
+                        <!-- Pénalité -->
+                        <div class="mb-3">
 
-<label class="form-label fw-semibold"
-for="{{ form.interet.id_for_label }}">
+                            <label
+                                class="form-label fw-semibold"
+                                for="{{ form.penalite.id_for_label }}"
+                            >
+                                Pénalité (%)
+                                {% if form.penalite.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
 
-Intérêt (%)
+                            {% if form.penalite.errors %}
+                                {{ form.penalite|add_class:"form-control form-control-lg is-invalid" }}
+                            {% else %}
+                                {{ form.penalite|add_class:"form-control form-control-lg" }}
+                            {% endif %}
 
-</label>
+                            {% if form.penalite.help_text %}
+                                <div class="form-text">
+                                    {{ form.penalite.help_text }}
+                                </div>
+                            {% else %}
+                                <div class="form-text">
+                                    Pourcentage appliqué en cas de retard de remboursement.
+                                </div>
+                            {% endif %}
 
-{{ form.interet|add_class:"form-control form-control-lg" }}
+                            {% for error in form.penalite.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
 
-{% if form.interet.errors %}
-<div class="invalid-feedback d-block">
-{{ form.interet.errors }}
-</div>
-{% endif %}
+                        </div>
 
-</div>
+                        <!-- Nombre de mois -->
+                        <div class="mb-3">
 
+                            <label
+                                class="form-label fw-semibold"
+                                for="{{ form.nb_mois.id_for_label }}"
+                            >
+                                Nombre de mois
+                                {% if form.nb_mois.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
 
-<!-- Nombre de mois -->
-<div class="mb-3">
+                            {% if form.nb_mois.errors %}
+                                {{ form.nb_mois|add_class:"form-control form-control-lg is-invalid" }}
+                            {% else %}
+                                {{ form.nb_mois|add_class:"form-control form-control-lg" }}
+                            {% endif %}
 
-<label class="form-label fw-semibold"
-for="{{ form.nb_mois.id_for_label }}">
+                            {% if form.nb_mois.help_text %}
+                                <div class="form-text">
+                                    {{ form.nb_mois.help_text }}
+                                </div>
+                            {% endif %}
 
-Nombre de mois
+                            {% for error in form.nb_mois.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
 
-</label>
+                        </div>
 
-{{ form.nb_mois|add_class:"form-control form-control-lg" }}
+                        <!-- Début du remboursement -->
+                        <div class="mb-3">
 
-{% if form.nb_mois.errors %}
-<div class="invalid-feedback d-block">
-{{ form.nb_mois.errors }}
-</div>
-{% endif %}
+                            <label
+                                class="form-label fw-semibold"
+                                for="{{ form.debut_remboursement.id_for_label }}"
+                            >
+                                Début du remboursement
+                                {% if form.debut_remboursement.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
 
-</div>
+                            {% if form.debut_remboursement.errors %}
+                                {{ form.debut_remboursement|add_class:"form-control form-control-lg is-invalid" }}
+                            {% else %}
+                                {{ form.debut_remboursement|add_class:"form-control form-control-lg" }}
+                            {% endif %}
 
+                            {% if form.debut_remboursement.help_text %}
+                                <div class="form-text">
+                                    {{ form.debut_remboursement.help_text }}
+                                </div>
+                            {% endif %}
 
-<!-- Début remboursement -->
-<div class="mb-3">
+                            {% for error in form.debut_remboursement.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
 
-<label class="form-label fw-semibold"
-for="{{ form.debut_remboursement.id_for_label }}">
+                        </div>
 
-Début de remboursement
+                        <!-- Erreurs générales -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-</label>
+                        <div class="d-flex flex-wrap gap-2 mt-4">
 
-{{ form.debut_remboursement|add_class:"form-control form-control-lg" }}
+                            <button
+                                type="submit"
+                                class="btn btn-primary btn-lg flex-grow-1"
+                            >
+                                📨 Envoyer la demande
+                            </button>
 
-{% if form.debut_remboursement.errors %}
-<div class="invalid-feedback d-block">
-{{ form.debut_remboursement.errors }}
-</div>
-{% endif %}
+                            <a
+                                href="{% url 'epargnecredit:group_detail' group.id %}"
+                                class="btn btn-outline-secondary btn-lg flex-grow-1"
+                            >
+                                Annuler
+                            </a>
 
-</div>
+                        </div>
 
+                    </form>
 
-{% if form.non_field_errors %}
-<div class="alert alert-danger">
-{{ form.non_field_errors }}
-</div>
-{% endif %}
+                </div>
+            </div>
 
-
-<div class="d-flex flex-wrap gap-2 mt-4">
-
-<button type="submit"
-class="btn btn-primary flex-grow-1">
-
-📨 Envoyer la demande
-
-</button>
-
-<a href="{% url 'epargnecredit:group_detail' group.id %}"
-class="btn btn-outline-secondary flex-grow-1">
-
-Annuler
-
-</a>
-
-</div>
-
-</form>
-
-</div>
-</div>
-
-</div>
-</div>
+        </div>
+    </div>
 
 </div>
 {% endblock %}

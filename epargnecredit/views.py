@@ -477,142 +477,301 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
 
-from django.db.models import Q, Sum, Value, DecimalField, Subquery, OuterRef, Exists
+from decimal import Decimal, ROUND_HALF_UP
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import (
+    Q,
+    Sum,
+    Value,
+    DecimalField,
+    Subquery,
+    OuterRef,
+    Exists,
+)
 from django.db.models.functions import Coalesce
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from accounts.models import Notification
 
-from .models import Group, GroupMember, Versement, PretDemande, ActionLog
-
+from .models import (
+    Group,
+    GroupMember,
+    Versement,
+    PretDemande,
+    ActionLog,
+)
 
 @login_required
 def group_detail(request, group_id):
 
     group = get_object_or_404(Group, id=group_id)
 
-    # =============================
-    # 🔐 Vérification accès
-    # =============================
+    # =====================================================
+    # 🔐 Vérification de l'accès
+    # =====================================================
     has_access = (
         group.admin_id == request.user.id
-        or GroupMember.objects.filter(group=group, user=request.user).exists()
+        or GroupMember.objects.filter(
+            group=group,
+            user=request.user,
+        ).exists()
         or getattr(request.user, "is_super_admin", False)
     )
 
     if not has_access:
-        messages.error(request, "⚠️ Vous n'avez pas accès à ce groupe.")
+        messages.error(
+            request,
+            "⚠️ Vous n'avez pas accès à ce groupe.",
+        )
         return redirect("epargnecredit:group_list")
 
-    # =============================
-    # 🔔 NOTIFICATIONS
-    # =============================
-    notifications = Notification.objects.order_by('-created_at')[:5]
+    # =====================================================
+    # 🔔 Notifications
+    # =====================================================
+    notifications = Notification.objects.order_by(
+        "-created_at"
+    )[:5]
 
-    # =============================
-    # 💰 Groupe remboursement
-    # =============================
+    # =====================================================
+    # 💰 Groupe de remboursement
+    # =====================================================
     remb_group = None
-    if not group.is_remboursement and hasattr(group, "get_remboursement_group"):
+
+    if (
+        not group.is_remboursement
+        and hasattr(group, "get_remboursement_group")
+    ):
         remb_group = group.get_remboursement_group()
 
-    # =============================
-    # 📌 Sous-requête dernier versement VALIDÉ
-    # =============================
+    # =====================================================
+    # 📌 Sous-requête : dernier versement validé
+    # =====================================================
     last_qs = Versement.objects.filter(
         member=OuterRef("pk"),
-        statut="VALIDE"
+        statut="VALIDE",
     )
 
     if group.date_reset:
-        last_qs = last_qs.filter(date_creation__gte=group.date_reset)
+        last_qs = last_qs.filter(
+            date_creation__gte=group.date_reset
+        )
 
     last_qs = last_qs.order_by("-date_creation")
 
-    # =============================
-    # 🏦 Sous-requête prêt actif
-    # =============================
+    # =====================================================
+    # 🏦 Sous-requête : prêt actif
+    # =====================================================
     pret_actif_subquery = PretDemande.objects.filter(
         member=OuterRef("pk"),
-        statut="APPROVED"
+        statut="APPROVED",
     )
 
-    # =============================
-    # 📊 Agrégation membres
-    # =============================
-    sum_filter = Q(versements_ec__statut__in=["VALIDE", "EN_ATTENTE"])
+    # =====================================================
+    # 📊 Agrégation des membres
+    # =====================================================
+    sum_filter = Q(
+        versements_ec__statut__in=["VALIDE", "EN_ATTENTE"]
+    )
 
     if group.date_reset:
-        sum_filter &= Q(versements_ec__date_creation__gte=group.date_reset)
+        sum_filter &= Q(
+            versements_ec__date_creation__gte=group.date_reset
+        )
 
     membres = (
-        GroupMember.objects.filter(group=group, actif=True)
+        GroupMember.objects
+        .filter(
+            group=group,
+            actif=True,
+        )
         .select_related("user")
         .annotate(
             total_montant=Coalesce(
-                Sum("versements_ec__montant", filter=sum_filter),
-                Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+                Sum(
+                    "versements_ec__montant",
+                    filter=sum_filter,
+                ),
+                Value(
+                    0,
+                    output_field=DecimalField(
+                        max_digits=12,
+                        decimal_places=0,
+                    ),
+                ),
             ),
-            last_amount=Subquery(last_qs.values("montant")[:1]),
-            last_date=Subquery(last_qs.values("date_creation")[:1]),
-            a_pret_actif=Exists(pret_actif_subquery),
+            last_amount=Subquery(
+                last_qs.values("montant")[:1]
+            ),
+            last_date=Subquery(
+                last_qs.values("date_creation")[:1]
+            ),
+            a_pret_actif=Exists(
+                pret_actif_subquery
+            ),
         )
         .order_by("id")
     )
 
-    # =============================
-    # 📈 Totaux financiers
-    # =============================
-    total_montant = group.total_versements_valides
-    total_prets = group.total_prets_approuves
-    caisse_disponible = group.caisse_disponible
+    # =====================================================
+    # 📈 Totaux financiers de base
+    # =====================================================
+    total_montant = Decimal(
+        str(group.total_versements_valides or 0)
+    )
 
-    # =============================
-    # 📜 Logs actions
-    # =============================
-    actions = ActionLog.objects.filter(group=group).order_by("-date")[:10]
+    total_prets = Decimal(
+        str(group.total_prets_approuves or 0)
+    )
 
-    # =============================
+    caisse_disponible = Decimal(
+        str(group.caisse_disponible or 0)
+    )
+
+    # =====================================================
+    # 💳 Prêts approuvés du groupe
+    # =====================================================
+    prets_approuves = (
+        PretDemande.objects
+        .filter(
+            member__group=group,
+            statut="APPROVED",
+        )
+        .select_related(
+            "member",
+            "member__user",
+        )
+    )
+
+    total_interets = Decimal("0")
+    total_penalites = Decimal("0")
+
+    for pret in prets_approuves:
+
+        montant_pret = Decimal(
+            str(pret.montant or 0)
+        )
+
+        taux_interet = Decimal(
+            str(pret.interet or 0)
+        )
+
+        # Montant des intérêts
+        montant_interet = (
+            montant_pret
+            * taux_interet
+            / Decimal("100")
+        )
+
+        total_interets += montant_interet
+
+        # =================================================
+        # Aucune pénalité sans retard réel
+        # =================================================
+        montant_penalite = Decimal("0")
+
+        total_penalites += montant_penalite
+
+    # =====================================================
+    # Arrondi en FCFA
+    # =====================================================
+    total_interets = total_interets.quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    total_penalites = total_penalites.quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    # =====================================================
+    # Total général
+    # =====================================================
+    total_general = (
+        total_montant
+        + total_interets
+        + total_penalites
+    )
+
+    # =====================================================
+    # 📜 Journaux des actions
+    # =====================================================
+    actions = (
+        ActionLog.objects
+        .filter(group=group)
+        .order_by("-date")[:10]
+    )
+
+    # =====================================================
     # 📌 Demandes de prêt en attente
-    # =============================
-    pending_prets = PretDemande.objects.filter(
-        member__group=group,
-        statut="PENDING"
-    ).select_related("member__user").order_by("-created_at")
+    # =====================================================
+    pending_prets = (
+        PretDemande.objects
+        .filter(
+            member__group=group,
+            statut="PENDING",
+        )
+        .select_related("member__user")
+        .order_by("-created_at")
+    )
 
-    # =============================
+    # =====================================================
     # 💰 Versements en attente
-    # =============================
-    versements_en_attente = Versement.objects.filter(
-        member__group=group,
-        statut="EN_ATTENTE"
-    ).select_related("member__user").order_by("-date_creation")
+    # =====================================================
+    versements_en_attente = (
+        Versement.objects
+        .filter(
+            member__group=group,
+            statut="EN_ATTENTE",
+        )
+        .select_related("member__user")
+        .order_by("-date_creation")
+    )
 
-    # =============================
-    # 🔗 Lien invitation
-    # =============================
-    code = str(group.code_invitation or group.uuid)
+    # =====================================================
+    # 🔗 Lien d'invitation
+    # =====================================================
+    code = str(
+        group.code_invitation or group.uuid
+    )
 
     invite_url = request.build_absolute_uri(
-        reverse("accounts:inscription_et_rejoindre", args=[code])
+        reverse(
+            "accounts:inscription_et_rejoindre",
+            args=[code],
+        )
     )
 
-    # =============================
-    # 👑 Vérification admin
-    # =============================
+    # =====================================================
+    # 👑 Vérification administrateur
+    # =====================================================
     user_is_admin = (
         request.user == group.admin
-        or getattr(request.user, "is_super_admin", False)
+        or getattr(
+            request.user,
+            "is_super_admin",
+            False,
+        )
     )
 
-    # =============================
-    # 📦 Context
-    # =============================
+    # =====================================================
+    # 📦 Contexte du template
+    # =====================================================
     context = {
         "group": group,
         "membres": membres,
+
         "total_montant": total_montant,
         "total_prets": total_prets,
         "caisse_disponible": caisse_disponible,
+
+        "total_interets": total_interets,
+        "total_penalites": total_penalites,
+        "total_general": total_general,
+
         "admin_user": group.admin,
         "actions": actions,
         "user_is_admin": user_is_admin,
@@ -620,100 +779,112 @@ def group_detail(request, group_id):
         "remb_group": remb_group,
         "pending_prets": pending_prets,
         "versements_en_attente": versements_en_attente,
-        "notifications": notifications,  # 🔥 IMPORTANT
+        "notifications": notifications,
     }
 
-    return render(request, "epargnecredit/group_detail.html", context)
+    return render(
+        request,
+        "epargnecredit/group_detail.html",
+        context,
+    )
 
-
-from datetime import timedelta
+import calendar
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
+
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, render
 from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-#from .models import Group, GroupMember, Versement, PretDemande
+from .models import (
+    Group,
+    GroupMember,
+    PretDemande,
+    PretRemboursement,
+)
 
-from decimal import Decimal, ROUND_HALF_UP
-from datetime import timedelta
-from django.db.models import Sum
-from django.utils import timezone
-from .models import PretRemboursement
+
+def ajouter_mois(date_depart: date, nombre_mois: int) -> date:
+    """
+    Ajoute un nombre de mois à une date sans dépendance externe.
+
+    Exemple :
+    31 janvier + 1 mois devient le dernier jour de février.
+    """
+    index_mois = date_depart.month - 1 + nombre_mois
+    annee = date_depart.year + index_mois // 12
+    mois = index_mois % 12 + 1
+
+    dernier_jour = calendar.monthrange(annee, mois)[1]
+    jour = min(date_depart.day, dernier_jour)
+
+    return date(annee, mois, jour)
+
 
 @login_required
 def group_detail_remboursement(request, group_id):
 
-    group = get_object_or_404(Group, pk=group_id, is_remboursement=True)
+    group = get_object_or_404(
+        Group.objects.select_related(
+            "admin",
+            "parent_group",
+        ),
+        pk=group_id,
+        is_remboursement=True,
+    )
+
     parent = group.parent_group
 
-    # 🔐 Vérification accès
-    if not (
-        request.user == group.admin
-        or GroupMember.objects.filter(group=group, user=request.user).exists()
-        or getattr(request.user, "is_super_admin", False)
-    ):
-        messages.error(request, "Accès non autorisé.")
+    # =====================================================
+    # Vérification du groupe parent
+    # =====================================================
+    if parent is None:
+        messages.error(
+            request,
+            "Le groupe d'épargne associé est introuvable.",
+        )
         return redirect("epargnecredit:group_list")
 
-    # 👥 Membres
+    # =====================================================
+    # Vérification de l'accès
+    # =====================================================
+    has_access = (
+        request.user == group.admin
+        or request.user == parent.admin
+        or GroupMember.objects.filter(
+            group=group,
+            user=request.user,
+            actif=True,
+        ).exists()
+        or getattr(request.user, "is_super_admin", False)
+        or getattr(request.user, "is_superuser", False)
+    )
+
+    if not has_access:
+        messages.error(
+            request,
+            "Accès non autorisé.",
+        )
+        return redirect("epargnecredit:group_list")
+
+    # =====================================================
+    # Membres du groupe de remboursement
+    # =====================================================
     membres = list(
         GroupMember.objects
         .select_related("user")
-        .filter(group=group, actif=True)
-        .order_by("user__nom")
-    )
-
-    if not membres:
-        return render(request, "epargnecredit/group_detail_remboursement.html", {
-            "group": group,
-            "membres": [],
-            "totals": {}
-        })
-
-    user_ids = [m.user_id for m in membres]
-
-    # =============================
-    # 📌 Tous les prêts
-    # =============================
-
-    prets = (
-        PretDemande.objects
         .filter(
-            member__group=parent,
-            member__user_id__in=user_ids,
-            statut__in=["APPROVED", "CLOSED"]
+            group=group,
+            actif=True,
         )
-        .select_related("member", "member__user")
+        .order_by("user__nom", "id")
     )
 
-    # index par utilisateur
-    prets_map = {}
-
-    for p in prets:
-        uid = p.member.user_id
-        if uid not in prets_map:
-            prets_map[uid] = p
-
-    # =============================
-    # 💰 Tous les remboursements
-    # =============================
-
-    remboursements = (
-        PretRemboursement.objects
-        .filter(pret__in=prets)
-        .values("pret")
-        .annotate(total=Sum("montant"))
-    )
-
-    remboursements_map = {
-        r["pret"]: r["total"] for r in remboursements
-    }
-
-    # =============================
-    # 🧮 Calculs
-    # =============================
-
+    # =====================================================
+    # Totaux initiaux
+    # =====================================================
     totals = {
         "total_verse": Decimal("0"),
         "montant_prete_plus_interet": Decimal("0"),
@@ -722,46 +893,219 @@ def group_detail_remboursement(request, group_id):
         "reste_a_rembourser": Decimal("0"),
     }
 
-    for m in membres:
+    if not membres:
+        return render(
+            request,
+            "epargnecredit/group_detail_remboursement.html",
+            {
+                "group": group,
+                "parent_group": parent,
+                "membres": [],
+                "totals": totals,
+            },
+        )
 
-        pret = prets_map.get(m.user_id)
+    user_ids = [membre.user_id for membre in membres]
 
-        if not pret:
-            m.total_verse = Decimal("0")
-            m.montant_prete_plus_interet = Decimal("0")
-            m.mensualite = Decimal("0")
-            m.penalites = Decimal("0")
-            m.reste_a_rembourser = Decimal("0")
+    # =====================================================
+    # Prêts des membres dans le groupe parent
+    # =====================================================
+    prets = list(
+        PretDemande.objects
+        .filter(
+            member__group=parent,
+            member__user_id__in=user_ids,
+            statut__in=["APPROVED", "CLOSED"],
+        )
+        .select_related(
+            "member",
+            "member__user",
+        )
+        .order_by(
+            "member__user_id",
+            "-created_at",
+        )
+    )
+
+    # Conserver le prêt le plus récent de chaque utilisateur
+    prets_map = {}
+
+    for pret in prets:
+        prets_map.setdefault(
+            pret.member.user_id,
+            pret,
+        )
+
+    # =====================================================
+    # Remboursements validés seulement
+    # =====================================================
+    remboursements = (
+        PretRemboursement.objects
+        .filter(
+            pret__in=prets,
+            statut="VALIDE",
+        )
+        .values("pret_id")
+        .annotate(total=Sum("montant"))
+    )
+
+    remboursements_map = {
+        remboursement["pret_id"]:
+            remboursement["total"] or Decimal("0")
+        for remboursement in remboursements
+    }
+
+    aujourd_hui = timezone.localdate()
+
+    # =====================================================
+    # Calculs par membre
+    # =====================================================
+    for membre in membres:
+
+        pret = prets_map.get(membre.user_id)
+
+        # Le template pourra utiliser membre.pret
+        membre.pret = pret
+
+        if pret is None:
+            membre.total_verse = Decimal("0")
+            membre.montant_prete_plus_interet = Decimal("0")
+            membre.mensualite = Decimal("0")
+            membre.penalites = Decimal("0")
+            membre.reste_a_rembourser = Decimal("0")
+            membre.nombre_echeances_en_retard = 0
+            membre.montant_en_retard = Decimal("0")
             continue
 
-        total_rembourse = remboursements_map.get(pret.id, Decimal("0"))
+        total_rembourse = Decimal(
+            str(
+                remboursements_map.get(
+                    pret.id,
+                    Decimal("0"),
+                )
+            )
+        )
 
-        total_du = pret.total_a_rembourser
-        mensualite = pret.mensualite
+        total_du = Decimal(
+            str(pret.total_a_rembourser or 0)
+        )
 
-        reste = max(total_du - total_rembourse, Decimal("0"))
+        mensualite = Decimal(
+            str(pret.mensualite or 0)
+        )
 
-        # 🔐 fermeture automatique
-        if pret.statut != "CLOSED" and reste == 0:
+        taux_penalite = Decimal(
+            str(pret.penalite or 0)
+        )
+
+        # =================================================
+        # Nombre d'échéances réellement dépassées
+        # =================================================
+        nombre_echeances_en_retard = 0
+
+        if pret.debut_remboursement and pret.nb_mois:
+            for numero_echeance in range(pret.nb_mois):
+                date_echeance = ajouter_mois(
+                    pret.debut_remboursement,
+                    numero_echeance,
+                )
+
+                # Une échéance n'est en retard qu'après sa date
+                if date_echeance < aujourd_hui:
+                    nombre_echeances_en_retard += 1
+
+        # =================================================
+        # Somme qui aurait déjà dû être remboursée
+        # =================================================
+        montant_theorique_echu = min(
+            mensualite * nombre_echeances_en_retard,
+            total_du,
+        )
+
+        montant_en_retard = max(
+            montant_theorique_echu - total_rembourse,
+            Decimal("0"),
+        )
+
+        # =================================================
+        # Pénalité uniquement sur la somme en retard
+        # =================================================
+        if montant_en_retard > 0 and taux_penalite > 0:
+            montant_penalite = (
+                montant_en_retard
+                * taux_penalite
+                / Decimal("100")
+            ).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
+        else:
+            montant_penalite = Decimal("0")
+
+        # Capital + intérêts restant, puis pénalité éventuelle
+        reste_hors_penalite = max(
+            total_du - total_rembourse,
+            Decimal("0"),
+        )
+
+        reste_total = (
+            reste_hors_penalite
+            + montant_penalite
+        )
+
+        # =================================================
+        # Fermeture automatique du prêt
+        # =================================================
+        if (
+            pret.statut != "CLOSED"
+            and reste_hors_penalite <= 0
+            and montant_penalite <= 0
+        ):
             pret.statut = "CLOSED"
             pret.save(update_fields=["statut"])
 
-        m.total_verse = total_rembourse
-        m.montant_prete_plus_interet = total_du
-        m.mensualite = mensualite
-        m.penalites = Decimal("0")
-        m.reste_a_rembourser = reste
+        # =================================================
+        # Valeurs utilisées dans le template
+        # =================================================
+        membre.total_verse = total_rembourse
+        membre.montant_prete_plus_interet = total_du
+        membre.mensualite = mensualite
+        membre.penalites = montant_penalite
+        membre.reste_a_rembourser = reste_total
+        membre.nombre_echeances_en_retard = (
+            nombre_echeances_en_retard
+        )
+        membre.montant_en_retard = montant_en_retard
 
+        # =================================================
+        # Totaux généraux
+        # =================================================
         totals["total_verse"] += total_rembourse
         totals["montant_prete_plus_interet"] += total_du
         totals["mensualite"] += mensualite
-        totals["reste_a_rembourser"] += reste
+        totals["penalites"] += montant_penalite
+        totals["reste_a_rembourser"] += reste_total
 
-    return render(request, "epargnecredit/group_detail_remboursement.html", {
-        "group": group,
-        "membres": membres,
-        "totals": totals
-    })
+    # =====================================================
+    # Arrondi des totaux en FCFA
+    # =====================================================
+    for cle in totals:
+        totals[cle] = totals[cle].quantize(
+            Decimal("1"),
+            rounding=ROUND_HALF_UP,
+        )
+
+    return render(
+        request,
+        "epargnecredit/group_detail_remboursement.html",
+        {
+            "group": group,
+            "parent_group": parent,
+            "membres": membres,
+            "totals": totals,
+            "date_du_jour": aujourd_hui,
+        },
+    )
 
 # epargnecredit/views.py
 import os
@@ -1628,162 +1972,304 @@ class IsAdminOrSuper(BasePermission):
             request.user.is_staff or request.user.is_super_admin
         )
 
-from decimal import Decimal, ROUND_HALF_UP
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
-from .models import GroupMember
 
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
-@login_required
-def initier_paiement_remboursement(request, member_id: int):
-    """
-    Initie le paiement de remboursement pour un membre
-    avec frais plateforme de 1 %.
-    """
-
-    member = get_object_or_404(
-        GroupMember.objects.select_related("group", "user"),
-        id=member_id
-    )
-
-    group = member.group
-
-    montant = None
-    frais = None
-    total = None
-
-    if request.method == "POST":
-
-        montant_raw = request.POST.get("montant", "").replace(",", ".").strip()
-
-        try:
-            montant = Decimal(montant_raw)
-        except Exception:
-            montant = Decimal("0")
-
-        if montant > 0:
-
-            # 💰 Frais 1 %
-            frais = (montant * Decimal("0.01")).quantize(
-                Decimal("1"),
-                rounding=ROUND_HALF_UP
-            )
-
-            # 💳 Total à payer
-            total = montant + frais
-
-    context = {
-        "member": member,
-        "group": group,
-        "montant": montant,
-        "frais": frais,
-        "total": total,
-    }
-
-    return render(
-        request,
-        "epargnecredit/initier_paiement_remboursement.html",
-        context
-    )
-
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect, render
+
 from .models import GroupMember, PretDemande, PretRemboursement
 
-@login_required
-def initier_paiement_remboursement(request, member_id):
 
+@login_required
+@transaction.atomic
+def initier_paiement_remboursement(request, member_id: int):
+    """
+    Enregistre manuellement un remboursement de prêt.
+
+    member_id correspond au membre du groupe de remboursement.
+    Le prêt est recherché dans le groupe d'épargne parent pour
+    le même utilisateur.
+    """
+
+    # =====================================================
+    # Membre du groupe de remboursement
+    # =====================================================
     member = get_object_or_404(
-        GroupMember.objects.select_related("group", "user"),
-        id=member_id
+        GroupMember.objects.select_related(
+            "group",
+            "group__admin",
+            "group__parent_group",
+            "group__parent_group__admin",
+            "user",
+        ),
+        id=member_id,
+        actif=True,
     )
 
-    group = member.group
+    remboursement_group = member.group
+    parent_group = remboursement_group.parent_group
 
-    # récupérer groupe parent (groupe épargne)
-    parent_group = group.parent_group if group.parent_group else group
+    # =====================================================
+    # Vérification du groupe de remboursement
+    # =====================================================
+    if not remboursement_group.is_remboursement:
+        messages.error(
+            request,
+            "Ce membre n'appartient pas à un groupe de remboursement.",
+        )
+        return redirect(
+            "epargnecredit:group_detail",
+            group_id=remboursement_group.id,
+        )
 
-    # récupérer le prêt approuvé
-    pret = PretDemande.objects.filter(
-        member__user=member.user,
-        member__group=parent_group,
-        statut="APPROVED"
-    ).order_by("-created_at").first()
+    if parent_group is None:
+        messages.error(
+            request,
+            "Le groupe d'épargne associé est introuvable.",
+        )
+        return redirect("epargnecredit:group_list")
 
-    if not pret:
-        messages.error(request, "Aucun crédit actif pour ce membre.")
-        return redirect("epargnecredit:group_detail_remboursement", group.id)
+    # =====================================================
+    # Vérification des autorisations
+    # =====================================================
+    has_access = (
+        request.user == member.user
+        or request.user == remboursement_group.admin
+        or request.user == parent_group.admin
+        or getattr(request.user, "is_super_admin", False)
+        or getattr(request.user, "is_superuser", False)
+    )
 
-    # calcul remboursement actuel
-    total_rembourse = pret.remboursements.aggregate(
-        total=Sum("montant")
-    )["total"] or Decimal("0")
+    if not has_access:
+        messages.error(
+            request,
+            "Vous n'avez pas l'autorisation d'enregistrer ce remboursement.",
+        )
+        return redirect(
+            "epargnecredit:group_detail_remboursement",
+            group_id=remboursement_group.id,
+        )
 
-    reste = pret.total_a_rembourser - total_rembourse
+    # =====================================================
+    # Recherche et verrouillage du prêt actif
+    # =====================================================
+    pret = (
+        PretDemande.objects
+        .select_for_update()
+        .select_related(
+            "member",
+            "member__user",
+            "member__group",
+        )
+        .filter(
+            member__user_id=member.user_id,
+            member__group_id=parent_group.id,
+            statut="APPROVED",
+        )
+        .order_by("-created_at")
+        .first()
+    )
 
+    if pret is None:
+        messages.error(
+            request,
+            f"Aucun prêt actif trouvé pour {member.user}.",
+        )
+        return redirect(
+            "epargnecredit:group_detail_remboursement",
+            group_id=remboursement_group.id,
+        )
+
+    # =====================================================
+    # Montants du prêt
+    # =====================================================
+    total_a_rembourser = Decimal(
+        str(pret.total_a_rembourser or 0)
+    ).quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    mensualite = Decimal(
+        str(pret.mensualite or 0)
+    ).quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    # Seuls les remboursements validés sont comptabilisés
+    total_rembourse = (
+        PretRemboursement.objects
+        .filter(
+            pret=pret,
+            statut="VALIDE",
+        )
+        .aggregate(total=Sum("montant"))
+        .get("total")
+        or Decimal("0")
+    )
+
+    total_rembourse = Decimal(
+        str(total_rembourse)
+    ).quantize(
+        Decimal("1"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    reste = max(
+        total_a_rembourser - total_rembourse,
+        Decimal("0"),
+    )
+
+    # Ne pas proposer une mensualité supérieure au solde
+    mensualite_proposee = min(
+        mensualite,
+        reste,
+    )
+
+    # =====================================================
+    # Prêt déjà soldé
+    # =====================================================
+    if reste <= 0:
+        pret.statut = "CLOSED"
+        pret.save(update_fields=["statut"])
+
+        messages.info(
+            request,
+            "Ce prêt est déjà entièrement remboursé.",
+        )
+        return redirect(
+            "epargnecredit:group_detail_remboursement",
+            group_id=remboursement_group.id,
+        )
+
+    # =====================================================
+    # Traitement du formulaire
+    # =====================================================
     if request.method == "POST":
 
-        montant_str = request.POST.get("montant", "").strip()
+        montant_brut = request.POST.get("montant", "")
 
-        if not montant_str:
-            messages.error(request, "Veuillez saisir un montant.")
-            return redirect(
-                "epargnecredit:initier_paiement_remboursement",
-                member_id=member.id
-            )
+        montant_str = (
+            str(montant_brut)
+            .strip()
+            .replace("\u00a0", "")
+            .replace(" ", "")
+            .replace(",", ".")
+        )
 
         try:
+            if not montant_str:
+                raise InvalidOperation
 
-            # 🔧 conversion robuste
-            montant_str = montant_str.replace(" ", "").replace(",", "")
             montant = Decimal(montant_str)
 
-            if montant <= 0:
-                raise ValueError("Montant invalide")
-
-            if montant > reste:
+            # Les remboursements sont enregistrés en FCFA entiers
+            if montant != montant.to_integral_value():
                 messages.error(
                     request,
-                    f"Le montant dépasse le reste à payer ({reste:,.0f} FCFA)."
+                    "Le montant doit être un nombre entier en FCFA.",
                 )
+
+            elif montant <= 0:
+                messages.error(
+                    request,
+                    "Le montant doit être supérieur à zéro.",
+                )
+
+            elif montant > reste:
+                messages.error(
+                    request,
+                    (
+                        "Le montant saisi dépasse le reste à payer : "
+                        f"{reste:,.0f} FCFA."
+                    ),
+                )
+
+            else:
+                montant = montant.quantize(
+                    Decimal("1"),
+                    rounding=ROUND_HALF_UP,
+                )
+
+                remboursement = PretRemboursement.objects.create(
+                    pret=pret,
+                    montant=montant,
+                    methode="MANUEL",
+                    statut="VALIDE",
+                    valide_par=request.user,
+                )
+
+                nouveau_total_rembourse = (
+                    total_rembourse + remboursement.montant
+                )
+
+                nouveau_reste = max(
+                    total_a_rembourser - nouveau_total_rembourse,
+                    Decimal("0"),
+                )
+
+                if nouveau_reste <= 0:
+                    pret.statut = "CLOSED"
+                    pret.save(update_fields=["statut"])
+
+                    messages.success(
+                        request,
+                        (
+                            f"Remboursement de {montant:,.0f} FCFA "
+                            "enregistré avec succès. "
+                            "Le prêt est maintenant entièrement soldé."
+                        ),
+                    )
+                else:
+                    messages.success(
+                        request,
+                        (
+                            f"Remboursement de {montant:,.0f} FCFA "
+                            "enregistré avec succès. "
+                            f"Reste à payer : {nouveau_reste:,.0f} FCFA."
+                        ),
+                    )
+
                 return redirect(
-                    "epargnecredit:initier_paiement_remboursement",
-                    member_id=member.id
+                    "epargnecredit:group_detail_remboursement",
+                    group_id=remboursement_group.id,
                 )
 
-            # enregistrer remboursement
-            PretRemboursement.objects.create(
-                pret=pret,
-                montant=montant,
-                methode="MANUEL",
-                statut="VALIDE"
-            )
-
-            messages.success(
+        except (InvalidOperation, ValueError, TypeError):
+            messages.error(
                 request,
-                f"Remboursement de {montant:,.0f} FCFA enregistré."
+                "Veuillez saisir un montant valide.",
             )
 
-            return redirect(
-                "epargnecredit:group_detail_remboursement",
-                group.id
-            )
+    # =====================================================
+    # Informations indicatives sur les frais
+    # =====================================================
+    taux_frais_plateforme = Decimal("1.00")
 
-        except Exception as e:
-            print("Erreur conversion montant :", e)
-            messages.error(request, "Montant invalide.")
-
+    # =====================================================
+    # Affichage du formulaire
+    # =====================================================
     context = {
         "member": member,
-        "group": group,
+        "group": remboursement_group,
+        "parent_group": parent_group,
         "pret": pret,
+
+        "total_a_rembourser": total_a_rembourser,
+        "total_rembourse": total_rembourse,
         "reste": reste,
+        "mensualite": mensualite_proposee,
+
+        "taux_frais_plateforme": taux_frais_plateforme,
     }
 
     return render(
         request,
         "epargnecredit/initier_paiement_remboursement.html",
-        context
+        context,
     )

@@ -4,249 +4,419 @@
 {% block title %}Rembourser un crédit{% endblock %}
 
 {% block content %}
-
 <div class="container py-4">
 
-<div class="row justify-content-center">
-<div class="col-xl-5 col-lg-6 col-md-8 col-12">
+  <div class="row justify-content-center">
+    <div class="col-xl-5 col-lg-6 col-md-8 col-12">
 
-{% if messages %}
-{% for message in messages %}
-<div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3">
-{{ message }}
-<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <!-- Messages -->
+      {% if messages %}
+        <div class="mb-3">
+          {% for message in messages %}
+            <div
+              class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show shadow-sm"
+              role="alert"
+            >
+              {{ message|safe }}
+
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Fermer"
+              ></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="card shadow border-0">
+
+        <div class="card-body p-4">
+
+          <h4 class="fw-bold text-success text-center mb-3">
+            💰 Remboursement de crédit
+          </h4>
+
+          <div class="text-center text-muted mb-4">
+
+            <div class="small mb-1">
+              👤
+              <strong>
+                {{ member.user.nom|default:member.user.phone }}
+              </strong>
+            </div>
+
+            <div class="small">
+              👥 Groupe :
+              <strong>{{ group.nom }}</strong>
+            </div>
+
+          </div>
+
+          <!-- Résumé du prêt -->
+          <div class="row g-2 mb-4">
+
+            <div class="col-6">
+              <div class="border rounded p-2 text-center h-100">
+                <div class="small text-muted">
+                  Total à rembourser
+                </div>
+
+                <div class="fw-bold text-primary">
+                  {{ total_a_rembourser|default:pret.total_a_rembourser|floatformat:0|intcomma }}
+                  FCFA
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div class="border rounded p-2 text-center h-100">
+                <div class="small text-muted">
+                  Déjà remboursé
+                </div>
+
+                <div class="fw-bold text-success">
+                  {{ total_rembourse|default_if_none:0|floatformat:0|intcomma }}
+                  FCFA
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div class="border rounded p-2 text-center h-100">
+                <div class="small text-muted">
+                  Mensualité
+                </div>
+
+                <div class="fw-bold">
+                  {{ mensualite|default:pret.mensualite|floatformat:0|intcomma }}
+                  FCFA
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <div class="border rounded p-2 text-center h-100">
+                <div class="small text-muted">
+                  Reste à payer
+                </div>
+
+                <div class="fw-bold text-danger">
+                  {{ reste|default_if_none:0|floatformat:0|intcomma }}
+                  FCFA
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {% if reste > 0 %}
+
+            <form
+              method="post"
+              id="remboursement-form"
+              class="needs-validation"
+              novalidate
+            >
+              {% csrf_token %}
+
+              <!-- Montant -->
+              <div class="mb-3">
+
+                <label
+                  for="montant"
+                  class="form-label fw-semibold"
+                >
+                  Montant du remboursement
+                </label>
+
+                <div class="input-group input-group-lg">
+
+                  <input
+                    type="number"
+                    name="montant"
+                    id="montant"
+                    class="form-control text-center"
+                    min="1"
+                    max="{{ reste|floatformat:0 }}"
+                    step="1"
+                    required
+                    autocomplete="off"
+                    inputmode="numeric"
+                    placeholder="Exemple : 10000"
+                    value="{{ request.POST.montant|default:'' }}"
+                  >
+
+                  <span class="input-group-text">
+                    FCFA
+                  </span>
+
+                  <div class="invalid-feedback text-center">
+                    Saisissez un montant compris entre 1 et
+                    {{ reste|floatformat:0|intcomma }} FCFA.
+                  </div>
+
+                </div>
+
+                <div class="form-text">
+                  Le montant ne peut pas dépasser le reste à payer.
+                </div>
+
+              </div>
+
+              <!-- Montants rapides -->
+              <div class="mb-4">
+
+                <label class="form-label small text-muted">
+                  Montants rapides
+                </label>
+
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+
+                  {% if mensualite %}
+                    <button
+                      type="button"
+                      class="btn btn-outline-success btn-sm montant-btn"
+                      data-value="{{ mensualite|floatformat:0 }}"
+                    >
+                      Mensualité :
+                      {{ mensualite|floatformat:0|intcomma }}
+                    </button>
+                  {% endif %}
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm montant-btn"
+                    data-value="5000"
+                  >
+                    5 000
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm montant-btn"
+                    data-value="10000"
+                  >
+                    10 000
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm montant-btn"
+                    data-value="25000"
+                  >
+                    25 000
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm montant-btn"
+                    data-value="{{ reste|floatformat:0 }}"
+                  >
+                    Tout solder
+                  </button>
+
+                </div>
+
+              </div>
+
+              <!-- Résumé -->
+              <div
+                class="card bg-light border-0 mb-3"
+                id="resume-section"
+                hidden
+              >
+                <div class="card-body">
+
+                  <div class="d-flex justify-content-between mb-2">
+                    <span>Remboursement enregistré</span>
+
+                    <strong id="montant-affiche">
+                      0 FCFA
+                    </strong>
+                  </div>
+
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">
+                      Frais plateforme (1 %)
+                    </span>
+
+                    <strong id="frais-affiche">
+                      0 FCFA
+                    </strong>
+                  </div>
+
+                  <hr>
+
+                  <div class="d-flex justify-content-between">
+                    <strong>Total à payer</strong>
+
+                    <strong
+                      id="total-affiche"
+                      class="text-success"
+                    >
+                      0 FCFA
+                    </strong>
+                  </div>
+
+                  <small class="text-muted d-block mt-2">
+                    Seul le montant du remboursement est déduit du crédit.
+                    Les frais plateforme sont facturés séparément.
+                  </small>
+
+                </div>
+              </div>
+
+              <div class="d-grid gap-2 mt-3">
+
+                <button
+                  type="submit"
+                  class="btn btn-success btn-lg"
+                  id="submit-btn"
+                >
+                  💳 Enregistrer le remboursement
+                </button>
+
+                <a
+                  href="{% url 'epargnecredit:group_detail_remboursement' group.id %}"
+                  class="btn btn-outline-secondary"
+                >
+                  Annuler
+                </a>
+
+              </div>
+
+            </form>
+
+          {% else %}
+
+            <div class="alert alert-success text-center mb-3">
+              ✅ Ce prêt est entièrement remboursé.
+            </div>
+
+            <div class="d-grid">
+              <a
+                href="{% url 'epargnecredit:group_detail_remboursement' group.id %}"
+                class="btn btn-outline-secondary"
+              >
+                Retour au groupe de remboursement
+              </a>
+            </div>
+
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
-{% endfor %}
-{% endif %}
-
-<div class="card shadow border-0">
-
-<div class="card-body p-4">
-
-<h4 class="fw-bold text-success text-center mb-3">
-💰 Remboursement de crédit
-</h4>
-
-<div class="text-center text-muted mb-3">
-
-<div class="small mb-1">
-👤 <strong>{{ member.user.nom|default:member.user.phone }}</strong>
-</div>
-
-<div class="small">
-👥 Groupe : <strong>{{ group.nom }}</strong>
-</div>
-
-</div>
-
-{% if reste %}
-<div class="alert alert-info text-center py-2 mb-4">
-Reste à payer : <strong>{{ reste|intcomma }} FCFA</strong>
-</div>
-{% endif %}
-
-<form method="post" id="remboursement-form" class="needs-validation" novalidate>
-
-{% csrf_token %}
-
-<!-- Montant -->
-
-<div class="mb-3">
-
-<label class="form-label fw-semibold">
-Montant du remboursement (FCFA)
-</label>
-
-<input
-type="number"
-name="montant"
-id="montant"
-class="form-control form-control-lg text-center"
-min="1"
-step="1"
-required
-placeholder="Ex : 10000"
->
-
-<div class="invalid-feedback text-center">
-Veuillez saisir un montant valide supérieur à 0.
-</div>
-
-</div>
-
-
-<!-- Résumé paiement -->
-
-<div class="card bg-light border-0 mb-3" id="resume-section" style="display:none;">
-
-<div class="card-body">
-
-<div class="d-flex justify-content-between mb-2">
-
-<span>Montant</span>
-<strong id="montant-affiche">0 FCFA</strong>
-
-</div>
-
-<div class="d-flex justify-content-between mb-2">
-
-<span class="text-muted">
-Frais plateforme (1%)
-</span>
-
-<strong id="frais">0 FCFA</strong>
-
-</div>
-
-<hr>
-
-<div class="d-flex justify-content-between">
-
-<strong>Total à payer</strong>
-<strong id="total" class="text-success">0 FCFA</strong>
-
-</div>
-
-</div>
-
-</div>
-
-
-<!-- Montants rapides -->
-
-<div class="mb-4">
-
-<label class="form-label small text-muted">
-Montants rapides
-</label>
-
-<div class="d-flex flex-wrap gap-2 justify-content-center">
-
-<button type="button" class="btn btn-outline-success btn-sm montant-btn" data-value="5000">5 000</button>
-<button type="button" class="btn btn-outline-success btn-sm montant-btn" data-value="10000">10 000</button>
-<button type="button" class="btn btn-outline-success btn-sm montant-btn" data-value="25000">25 000</button>
-<button type="button" class="btn btn-outline-success btn-sm montant-btn" data-value="50000">50 000</button>
-
-</div>
-
-</div>
-
-
-<div class="d-grid gap-2 mt-3">
-
-<button
-type="submit"
-class="btn btn-success btn-lg"
-id="submit-btn"
->
-
-💳 Payer le remboursement
-
-</button>
-
-<a
-href="{% url 'epargnecredit:group_detail_remboursement' group.id %}"
-class="btn btn-outline-secondary"
->
-
-Annuler
-
-</a>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-
-
 
 <script>
-
 document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
 
-const form = document.getElementById("remboursement-form");
-const submitBtn = document.getElementById("submit-btn");
-const montantInput = document.getElementById("montant");
+  const form = document.getElementById("remboursement-form");
 
-const montantAffiche = document.getElementById("montant-affiche");
-const fraisEl = document.getElementById("frais");
-const totalEl = document.getElementById("total");
-const resumeSection = document.getElementById("resume-section");
+  if (!form) {
+    return;
+  }
 
-const buttons = document.querySelectorAll(".montant-btn");
+  const submitBtn = document.getElementById("submit-btn");
+  const montantInput = document.getElementById("montant");
+  const montantAffiche = document.getElementById("montant-affiche");
+  const fraisAffiche = document.getElementById("frais-affiche");
+  const totalAffiche = document.getElementById("total-affiche");
+  const resumeSection = document.getElementById("resume-section");
+  const buttons = document.querySelectorAll(".montant-btn");
 
-const fmt = new Intl.NumberFormat('fr-FR');
+  const reste = Number(
+    String("{{ reste|default_if_none:0|floatformat:0 }}")
+      .replace(/\s/g, "")
+      .replace(",", ".")
+  );
 
+  const formatMontant = new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 0
+  });
 
-function updateTotal(){
+  function normaliserMontant(value) {
+    const montant = Number(value);
 
-let montant = parseFloat(montantInput.value);
+    if (!Number.isFinite(montant)) {
+      return 0;
+    }
 
-if(isNaN(montant) || montant <= 0){
+    return Math.round(montant);
+  }
 
-resumeSection.style.display = "none";
-return;
+  function updateTotal() {
+    const montant = normaliserMontant(montantInput.value);
 
-}
+    if (montant <= 0) {
+      resumeSection.hidden = true;
+      montantInput.setCustomValidity("");
+      return;
+    }
 
-montant = Math.round(montant);
+    if (montant > reste) {
+      montantInput.setCustomValidity(
+        "Le montant dépasse le reste à payer."
+      );
+      resumeSection.hidden = true;
+      return;
+    }
 
-const frais = Math.round(montant * 0.01);
-const total = montant + frais;
+    montantInput.setCustomValidity("");
 
-montantAffiche.textContent = fmt.format(montant) + " FCFA";
-fraisEl.textContent = fmt.format(frais) + " FCFA";
-totalEl.textContent = fmt.format(total) + " FCFA";
+    const frais = Math.round(montant * 0.01);
+    const total = montant + frais;
 
-resumeSection.style.display = "block";
+    montantAffiche.textContent =
+      formatMontant.format(montant) + " FCFA";
 
-}
+    fraisAffiche.textContent =
+      formatMontant.format(frais) + " FCFA";
 
-montantInput.addEventListener("input", updateTotal);
+    totalAffiche.textContent =
+      formatMontant.format(total) + " FCFA";
 
+    resumeSection.hidden = false;
+  }
 
-buttons.forEach(btn => {
+  montantInput.addEventListener("input", updateTotal);
 
-btn.addEventListener("click", () => {
+  buttons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      let montant = normaliserMontant(button.dataset.value);
 
-montantInput.value = btn.dataset.value;
-updateTotal();
-montantInput.focus();
+      if (montant > reste) {
+        montant = reste;
+      }
 
+      montantInput.value = montant;
+      updateTotal();
+      montantInput.focus();
+    });
+  });
+
+  form.addEventListener("submit", function (event) {
+    updateTotal();
+
+    if (!form.checkValidity()) {
+      event.preventDefault();
+      event.stopPropagation();
+    } else {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "⏳ Enregistrement en cours…";
+    }
+
+    form.classList.add("was-validated");
+  });
+
+  updateTotal();
 });
-
-});
-
-
-form.addEventListener("submit", function (event) {
-
-if (!form.checkValidity()) {
-
-event.preventDefault();
-event.stopPropagation();
-
-} else {
-
-submitBtn.disabled = true;
-submitBtn.innerHTML = "⏳ Traitement du paiement...";
-
-}
-
-form.classList.add("was-validated");
-
-});
-
-});
-
 </script>
-
 {% endblock %}
-

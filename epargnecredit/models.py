@@ -297,6 +297,12 @@ class PretDemande(models.Model):
 
     montant = models.DecimalField(max_digits=12, decimal_places=0)
     interet = models.DecimalField(max_digits=5, decimal_places=2)
+    penalite = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=10,
+        verbose_name="Pénalité (%)"
+    )
     nb_mois = models.PositiveIntegerField()
     debut_remboursement = models.DateField()
 
@@ -331,6 +337,14 @@ class PretDemande(models.Model):
     def mensualite(self):
         return (self.total_a_rembourser / self.nb_mois) if self.nb_mois else self.total_a_rembourser
 
+@property
+def montant_penalite(self):
+    return self.total_a_rembourser * (
+        self.penalite / Decimal("100")
+    )
+@property
+def total_avec_penalite(self):
+    return self.total_a_rembourser + self.montant_penalite
 
 # =========================================================
 # REMBOURSEMENT PRET

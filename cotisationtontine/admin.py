@@ -91,8 +91,10 @@ class GroupAdmin(admin.ModelAdmin):
     admin_phone.short_description = 'Admin (Téléphone)'
 
     def membres_count(self, obj):
-        return obj.groupmember_set.count()  # ✅ CORRIGÉ
-    membres_count.short_description = 'Nombre de membres'
+        return obj.membres.count()
+#    def membres_count(self, obj):
+#        return obj.groupmember_set.count()  # ✅ CORRIGÉ
+#    membres_count.short_description = 'Nombre de membres'
 
 
 # =====================================================

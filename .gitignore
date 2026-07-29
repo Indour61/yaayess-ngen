@@ -57,3 +57,5 @@ Thumbs.db
 *.crt
 *.key
 certs/
+__pycache__/
+*.pyc
