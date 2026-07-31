@@ -6,305 +6,442 @@
 
 {% block content %}
 
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 px-4">
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200 px-4 py-8">
 
-<div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 md:p-8">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 md:p-8">
 
-<!-- LOGO -->
+        <!-- LOGO -->
+        <div class="text-center mb-6">
 
-<div class="text-center mb-6">
+            <img
+                src="{% static 'img/logo.png' %}"
+                class="mx-auto mb-3 w-14"
+                alt="Logo YaayESS"
+            >
 
-<img src="{% static 'img/logo.png' %}" class="mx-auto mb-3 w-14" alt="YaayESS">
+            <h1 class="text-2xl font-bold text-green-700">
+                Créer un compte
+            </h1>
 
-<h1 class="text-2xl font-bold text-green-700">
-Créer un compte
-</h1>
+            <p class="text-sm text-gray-500">
+                Rejoignez YaayESS en quelques secondes
+            </p>
 
-<p class="text-sm text-gray-500">
-Rejoignez YaayESS en quelques secondes
-</p>
+        </div>
 
-</div>
 
+        <!-- MESSAGES DJANGO -->
+        {% if messages %}
+            {% for message in messages %}
 
-<!-- MESSAGES -->
+                <div class="mb-4 p-3 rounded-lg text-sm bg-red-100 text-red-700">
+                    {{ message }}
+                </div>
 
-{% if messages %}
-{% for message in messages %}
+            {% endfor %}
+        {% endif %}
 
-<div class="mb-4 p-3 rounded-lg text-sm bg-red-100 text-red-700">
-{{ message }}
-</div>
 
-{% endfor %}
-{% endif %}
+        <!-- ERREURS GÉNÉRALES DU FORMULAIRE -->
+        {% if form.non_field_errors %}
 
+            <div class="mb-4 p-3 rounded-lg text-sm bg-red-100 text-red-700">
 
-<form method="post" class="space-y-4" novalidate>
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
 
-{% csrf_token %}
+            </div>
 
+        {% endif %}
 
-<!-- NOM -->
 
-<div>
+        <form method="post" class="space-y-4" novalidate>
 
-<label class="block text-sm font-semibold mb-1">
-Nom complet
-</label>
+            {% csrf_token %}
 
-{{ form.nom|add_class:"w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"|attr:"placeholder:Votre nom complet" }}
 
-</div>
+            <!-- NOM COMPLET -->
+            <div>
 
+                <label
+                    for="{{ form.nom.id_for_label }}"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.nom.label|default:"Nom complet" }}
+                </label>
 
+                {{ form.nom|add_class:"w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"placeholder:Votre nom complet" }}
 
-<!-- TELEPHONE -->
+                {% for error in form.nom.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-<div>
+            </div>
 
-<label class="block text-sm font-semibold mb-1">
-Numéro de téléphone
-</label>
 
-<div class="flex">
+            <!-- NUMÉRO DE TÉLÉPHONE -->
+            <div>
 
-<select id="country_code"
-class="border rounded-l-lg px-2 bg-gray-100">
+                <label
+                    for="phone_input"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    Numéro de téléphone
+                </label>
 
-<option value="+221">🇸🇳 +221</option>
-<option value="+225">🇨🇮 +225</option>
-<option value="+223">🇲🇱 +223</option>
-<option value="+226">🇧🇫 +226</option>
-<option value="+229">🇧🇯 +229</option>
+                <div class="flex">
 
-</select>
+                    <select
+                        id="country_code"
+                        name="country_code"
+                        class="border rounded-l-lg px-2 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        aria-label="Indicatif téléphonique"
+                    >
+                        <option value="+221" data-country="SN">🇸🇳 +221</option>
+                        <option value="+225" data-country="CI">🇨🇮 +225</option>
+                        <option value="+223" data-country="ML">🇲🇱 +223</option>
+                        <option value="+226" data-country="BF">🇧🇫 +226</option>
+                        <option value="+229" data-country="BJ">🇧🇯 +229</option>
+                    </select>
 
-{{ form.phone|add_class:"flex-1 border rounded-r-lg px-3 py-2 focus:ring-2 focus:ring-green-500"|attr:"placeholder:77 123 45 67"|attr:"id:phone_input" }}
+                    {{ form.phone|add_class:"flex-1 min-w-0 border border-l-0 rounded-r-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"placeholder:77 123 45 67"|attr:"id:phone_input" }}
 
-</div>
+                </div>
 
-</div>
+                {% for error in form.phone.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
+            </div>
 
 
-<!-- PAYS AUTO -->
+            <!-- PAYS DE RÉSIDENCE -->
+            <div>
 
-<div>
+                <label
+                    for="pays_input"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.pays.label|default:"Pays de résidence" }}
+                </label>
 
-<label class="block text-sm font-semibold mb-1">
-Pays
-</label>
+                {{ form.pays|add_class:"w-full border rounded-lg px-3 py-2 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"id:pays_input" }}
 
-{{ form.pays|add_class:"w-full border rounded-lg px-3 py-2 bg-gray-100"|attr:"readonly:true"|attr:"id:pays_input" }}
+                {% for error in form.pays.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-</div>
+            </div>
 
 
+            <!-- VILLE -->
+            <div>
 
-<!-- VILLE -->
+                <label
+                    for="{{ form.ville.id_for_label }}"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.ville.label|default:"Ville" }}
+                </label>
 
-<div>
+                {{ form.ville|add_class:"w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"placeholder:Dakar" }}
 
-<label class="block text-sm font-semibold mb-1">
-Ville
-</label>
+                {% for error in form.ville.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-{{ form.ville|add_class:"w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500"|attr:"placeholder:Dakar" }}
+            </div>
 
-</div>
 
+            <!-- MOT DE PASSE -->
+            <div>
 
+                <label
+                    for="password1"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.password1.label|default:"Mot de passe" }}
+                </label>
 
-<!-- PASSWORD -->
+                <div class="relative">
 
-<div>
+                    {{ form.password1|add_class:"w-full border rounded-lg px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"id:password1" }}
 
-<label class="block text-sm font-semibold mb-1">
-Mot de passe
-</label>
+                    <button
+                        type="button"
+                        onclick="togglePassword('password1', this)"
+                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+                        aria-label="Afficher ou masquer le mot de passe"
+                    >
+                        👁
+                    </button>
 
-<div class="relative">
+                </div>
 
-{{ form.password1|add_class:"w-full border rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"|attr:"id:password1" }}
+                {% for error in form.password1.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-<button type="button"
-onclick="togglePassword('password1')"
-class="absolute right-3 top-2.5 text-gray-500">
+            </div>
 
-👁
 
-</button>
+            <!-- CONFIRMATION DU MOT DE PASSE -->
+            <div>
 
-</div>
+                <label
+                    for="password2"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.password2.label|default:"Confirmer le mot de passe" }}
+                </label>
 
-</div>
+                <div class="relative">
 
+                    {{ form.password2|add_class:"w-full border rounded-lg px-3 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-green-500"|attr:"id:password2" }}
 
+                    <button
+                        type="button"
+                        onclick="togglePassword('password2', this)"
+                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+                        aria-label="Afficher ou masquer la confirmation du mot de passe"
+                    >
+                        👁
+                    </button>
 
-<!-- PASSWORD CONFIRM -->
+                </div>
 
-<div>
+                {% for error in form.password2.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-<label class="block text-sm font-semibold mb-1">
-Confirmer mot de passe
-</label>
+            </div>
 
-<div class="relative">
 
-{{ form.password2|add_class:"w-full border rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-green-500"|attr:"id:password2" }}
+            <!-- TYPE DE COMPTE -->
+            <div>
 
-<button type="button"
-onclick="togglePassword('password2')"
-class="absolute right-3 top-2.5 text-gray-500">
+                <label
+                    for="{{ form.option.id_for_label }}"
+                    class="block text-sm font-semibold mb-1"
+                >
+                    {{ form.option.label|default:"Type de compte" }}
+                </label>
 
-👁
+                {{ form.option|add_class:"w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" }}
 
-</button>
+                {% for error in form.option.errors %}
+                    <p class="mt-1 text-sm text-red-600">
+                        {{ error }}
+                    </p>
+                {% endfor %}
 
-</div>
+            </div>
 
-</div>
 
+            <!-- CONDITIONS D’UTILISATION -->
+            <div class="flex items-start text-sm">
 
+                <input
+                    id="accept_terms"
+                    name="accept_terms"
+                    type="checkbox"
+                    class="mt-1 mr-2 h-4 w-4 text-green-600 border-gray-300 rounded"
+                    required
+                >
 
-<!-- OPTION -->
+                <label for="accept_terms">
 
-<div>
+                    J’accepte les
 
-<label class="block text-sm font-semibold mb-1">
-Type de compte
-</label>
+                    <a
+                        href="/legal/terms/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-green-700 underline"
+                    >
+                        Conditions d’utilisation
+                    </a>
 
-{{ form.option|add_class:"w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500" }}
+                </label>
 
-</div>
+            </div>
 
 
+            <!-- BOUTON D’INSCRIPTION -->
+            <div class="mt-5">
 
-<!-- CONDITIONS -->
+                <button
+                    id="submit_btn"
+                    type="submit"
+                    disabled
+                    class="w-full bg-gray-200 border border-gray-300 text-gray-500 font-bold py-3 px-4 rounded-lg shadow-sm cursor-not-allowed transition"
+                >
+                    Créer mon compte
+                </button>
 
-<div class="flex items-start text-sm">
+            </div>
 
-<input id="accept_terms"
-type="checkbox"
-class="mt-1 mr-2 h-4 w-4 text-green-600 border-gray-300 rounded">
+        </form>
 
-<label for="accept_terms">
 
-J'accepte les
+        <!-- CONNEXION -->
+        <p class="mt-5 text-center text-sm text-gray-600">
 
-<a href="/legal/terms/"
-target="_blank"
-class="text-green-700 underline">
+            Déjà inscrit ?
 
-Conditions d'utilisation
+            <a
+                href="{% url 'accounts:login' %}"
+                class="text-green-700 font-semibold hover:underline"
+            >
+                Se connecter
+            </a>
 
-</a>
+        </p>
 
-</label>
-
-</div>
-
-
-
-<!-- BOUTON -->
-<div class="mt-5 ms-2">
-
-<button id="submit_btn"
-type="submit"
-class="bg-white border border-success text-black fw-bold py-3 px-4 rounded shadow-sm">
-
-Créer mon compte
-
-</button>
-
-</div>
-
-
-</form>
-
-
-
-<!-- LOGIN -->
-
-<p class="mt-5 text-center text-sm text-gray-600">
-
-Déjà inscrit ?
-
-<a href="{% url 'accounts:login' %}"
-class="text-green-700 font-semibold hover:underline">
-
-Se connecter
-
-</a>
-
-</p>
-
-</div>
+    </div>
 
 </div>
 
 {% endblock %}
 
 
-
 {% block extra_script %}
 
 <script>
+document.addEventListener("DOMContentLoaded", function () {
 
-function togglePassword(id){
+    const checkbox = document.getElementById("accept_terms");
+    const submitButton = document.getElementById("submit_btn");
+    const countryCode = document.getElementById("country_code");
+    const paysInput = document.getElementById("pays_input");
 
-const input = document.getElementById(id)
+    /*
+     * Affichage ou masquage d’un mot de passe.
+     */
+    window.togglePassword = function (inputId, button) {
 
-input.type = input.type === "password" ? "text" : "password"
+        const input = document.getElementById(inputId);
 
-}
+        if (!input) {
+            return;
+        }
 
+        const passwordIsHidden = input.type === "password";
 
+        input.type = passwordIsHidden ? "text" : "password";
 
-// activation bouton conditions
-
-const checkbox = document.getElementById("accept_terms")
-const button = document.getElementById("submit_btn")
-
-checkbox.addEventListener("change", function(){
-
-button.disabled = !this.checked
-
-button.classList.toggle("bg-green-600")
-button.classList.toggle("hover:bg-green-700")
-
-})
-
-
-
-// detection pays automatique
-
-const countryMap = {
-
-"+221": "Sénégal",
-"+225": "Côte d'Ivoire",
-"+223": "Mali",
-"+226": "Burkina Faso",
-"+229": "Bénin"
-
-}
-
-const countryCode = document.getElementById("country_code")
-const paysInput = document.getElementById("pays_input")
-
-countryCode.addEventListener("change", function(){
-
-paysInput.value = countryMap[this.value]
-
-})
+        if (button) {
+            button.textContent = passwordIsHidden ? "🙈" : "👁";
+        }
+    };
 
 
-// valeur initiale
+    /*
+     * Activation du bouton après acceptation des conditions.
+     */
+    function updateSubmitButton() {
 
-paysInput.value = countryMap[countryCode.value]
+        if (!checkbox || !submitButton) {
+            return;
+        }
 
+        submitButton.disabled = !checkbox.checked;
+
+        if (checkbox.checked) {
+
+            submitButton.classList.remove(
+                "bg-gray-200",
+                "border-gray-300",
+                "text-gray-500",
+                "cursor-not-allowed"
+            );
+
+            submitButton.classList.add(
+                "bg-green-600",
+                "border-green-600",
+                "text-white",
+                "hover:bg-green-700",
+                "cursor-pointer"
+            );
+
+        } else {
+
+            submitButton.classList.remove(
+                "bg-green-600",
+                "border-green-600",
+                "text-white",
+                "hover:bg-green-700",
+                "cursor-pointer"
+            );
+
+            submitButton.classList.add(
+                "bg-gray-200",
+                "border-gray-300",
+                "text-gray-500",
+                "cursor-not-allowed"
+            );
+        }
+    }
+
+    if (checkbox) {
+        checkbox.addEventListener("change", updateSubmitButton);
+        updateSubmitButton();
+    }
+
+
+    /*
+     * Synchronisation de l’indicatif téléphonique avec le pays.
+     *
+     * django-countries attend les valeurs :
+     * SN, CI, ML, BF, BJ...
+     */
+    function synchronizeCountry() {
+
+        if (!countryCode || !paysInput) {
+            return;
+        }
+
+        const selectedOption =
+            countryCode.options[countryCode.selectedIndex];
+
+        const countryIsoCode =
+            selectedOption.dataset.country;
+
+        if (countryIsoCode) {
+            paysInput.value = countryIsoCode;
+        }
+    }
+
+    if (countryCode && paysInput) {
+
+        countryCode.addEventListener(
+            "change",
+            synchronizeCountry
+        );
+
+        /*
+         * Si le formulaire est réaffiché après une erreur,
+         * conserver le pays déjà sélectionné.
+         */
+        if (!paysInput.value || paysInput.value === "AF") {
+            synchronizeCountry();
+        }
+    }
+
+});
 </script>
 
 {% endblock %}
