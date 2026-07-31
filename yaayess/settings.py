@@ -41,17 +41,20 @@ EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY")
 # ----------------------------------------------------
 # 🗄 DATABASE - Version sécurisée
 # ----------------------------------------------------
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'bd_yaayess',
-        'USER': 'bd_yaayess_user',
-        'PASSWORD': 'EJG8HXqiEakEIMekrZcLCY05xoSZBgXk',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+    "default": {
+        "ENGINE": os.getenv(
+            "DB_ENGINE",
+            "django.db.backends.postgresql",
+        ),
+        "NAME": os.environ["DB_NAME"],
+        "USER": os.environ["DB_USER"],
+        "PASSWORD": os.environ["DB_PASSWORD"],
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
+
 
 SESSION_COOKIE_AGE = 3600  # 1 heure
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
