@@ -1,0 +1,1733 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}
+Tableau de bord exécutif — Semaine {{ dashboard.week_number }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --dashboard-primary: #1457b8;
+        --dashboard-primary-light: #3f9ced;
+        --dashboard-dark: #102a56;
+        --dashboard-text: #172b4d;
+        --dashboard-muted: #6b778c;
+        --dashboard-background: #f4f7fb;
+        --dashboard-border: #e6ebf2;
+        --dashboard-success: #198754;
+        --dashboard-warning: #f0ad00;
+        --dashboard-danger: #dc3545;
+    }
+
+    body {
+        background-color: var(--dashboard-background);
+    }
+
+    .executive-dashboard {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    /* ==========================================================
+       EN-TÊTE
+       ========================================================== */
+
+    .dashboard-header {
+        position: relative;
+        overflow: hidden;
+        border-radius: 22px;
+        padding: 30px;
+        color: #ffffff;
+        background:
+            linear-gradient(
+                135deg,
+                var(--dashboard-primary) 0%,
+                #247dd1 55%,
+                var(--dashboard-primary-light) 100%
+            );
+        box-shadow: 0 16px 42px rgba(20, 87, 184, 0.22);
+    }
+
+    .dashboard-header::before {
+        content: "";
+        position: absolute;
+        top: -85px;
+        right: -80px;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .dashboard-header::after {
+        content: "";
+        position: absolute;
+        right: 180px;
+        bottom: -110px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .dashboard-header-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .dashboard-project-label {
+        margin-bottom: 8px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        opacity: 0.85;
+    }
+
+    .dashboard-title {
+        margin-bottom: 8px;
+        font-size: clamp(1.55rem, 3vw, 2.2rem);
+        font-weight: 800;
+    }
+
+    .dashboard-subtitle {
+        max-width: 850px;
+        margin-bottom: 0;
+        font-size: 0.98rem;
+        line-height: 1.6;
+        opacity: 0.94;
+    }
+
+    .week-summary {
+        min-width: 230px;
+        padding: 16px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.11);
+        backdrop-filter: blur(8px);
+    }
+
+    .week-number {
+        font-size: 1.05rem;
+        font-weight: 800;
+    }
+
+    .week-period {
+        margin-top: 4px;
+        font-size: 0.9rem;
+    }
+
+    .sync-line {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        margin-top: 9px;
+        font-size: 0.78rem;
+        opacity: 0.92;
+    }
+
+    .sync-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #d9e2ec;
+    }
+
+    .sync-dot.is-online {
+        background: #4ade80;
+        box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.18);
+    }
+
+    .sync-dot.is-loading {
+        background: #facc15;
+        animation: dashboardPulse 1s infinite;
+    }
+
+    .sync-dot.is-offline {
+        background: #f87171;
+        box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.16);
+    }
+
+    /* ==========================================================
+       CARTES
+       ========================================================== */
+
+    .dashboard-card,
+    .kpi-card {
+        border: 1px solid rgba(222, 229, 239, 0.72);
+        background: #ffffff;
+        box-shadow: 0 8px 28px rgba(23, 43, 77, 0.07);
+    }
+
+    .dashboard-card {
+        height: 100%;
+        border-radius: 18px;
+    }
+
+    .dashboard-card .card-body {
+        padding: 22px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 18px;
+        color: var(--dashboard-text);
+        font-size: 1.14rem;
+        font-weight: 800;
+    }
+
+    .section-title::before {
+        content: "";
+        width: 5px;
+        height: 21px;
+        border-radius: 10px;
+        background:
+            linear-gradient(
+                180deg,
+                var(--dashboard-primary),
+                var(--dashboard-primary-light)
+            );
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 16px;
+    }
+
+    .section-heading .section-title {
+        margin-bottom: 0;
+    }
+
+    .section-caption {
+        color: var(--dashboard-muted);
+        font-size: 0.84rem;
+    }
+
+    /* ==========================================================
+       STATUT GLOBAL
+       ========================================================== */
+
+    .status-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 74px;
+        padding: 18px;
+        border-radius: 15px;
+        text-align: center;
+        font-weight: 800;
+    }
+
+    .status-indicator {
+        width: 17px;
+        height: 17px;
+        flex: 0 0 17px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+    }
+
+    .status-green {
+        color: #11683f;
+        background: #d9f0e3;
+    }
+
+    .status-green .status-indicator {
+        background: #20c667;
+    }
+
+    .status-yellow {
+        color: #856404;
+        background: #fff3cd;
+    }
+
+    .status-yellow .status-indicator {
+        background: #ffc107;
+    }
+
+    .status-red {
+        color: #9f1f2e;
+        background: #f8d7da;
+    }
+
+    .status-red .status-indicator {
+        background: #dc3545;
+    }
+
+    /* ==========================================================
+       AVANCEMENT
+       ========================================================== */
+
+    .progress-value {
+        color: var(--dashboard-text);
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .dashboard-progress {
+        height: 17px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8edf4;
+    }
+
+    .dashboard-progress .progress-bar {
+        border-radius: inherit;
+        background:
+            linear-gradient(
+                90deg,
+                var(--dashboard-primary),
+                var(--dashboard-primary-light)
+            );
+        transition: width 0.6s ease;
+    }
+
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .status-mini-card {
+        padding: 10px 11px;
+        border: 1px solid var(--dashboard-border);
+        border-radius: 12px;
+        background: #f9fbfd;
+    }
+
+    .status-mini-label {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--dashboard-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .status-mini-value {
+        color: var(--dashboard-text);
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    /* ==========================================================
+       KPI
+       ========================================================== */
+
+    .kpi-card {
+        position: relative;
+        min-height: 160px;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 18px;
+        padding: 22px;
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 34px rgba(23, 43, 77, 0.11);
+    }
+
+    .kpi-card::after {
+        content: "";
+        position: absolute;
+        top: -38px;
+        right: -38px;
+        width: 95px;
+        height: 95px;
+        border-radius: 50%;
+        background: rgba(36, 125, 209, 0.06);
+    }
+
+    .kpi-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 39px;
+        height: 39px;
+        margin-bottom: 13px;
+        border-radius: 12px;
+        color: var(--dashboard-primary);
+        background: #edf5ff;
+        font-size: 1.1rem;
+    }
+
+    .kpi-label {
+        margin-bottom: 6px;
+        color: var(--dashboard-muted);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .kpi-value {
+        position: relative;
+        z-index: 2;
+        min-height: 38px;
+        overflow-wrap: anywhere;
+        color: var(--dashboard-dark);
+        font-size: clamp(1.42rem, 2.3vw, 1.95rem);
+        font-weight: 850;
+        line-height: 1.22;
+    }
+
+    .kpi-value small {
+        color: var(--dashboard-muted);
+        font-size: 0.65rem;
+        font-weight: 700;
+    }
+
+    .kpi-detail {
+        position: relative;
+        z-index: 2;
+        display: block;
+        margin-top: 8px;
+        color: var(--dashboard-muted);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .kpi-detail strong {
+        color: var(--dashboard-primary);
+        font-weight: 800;
+    }
+
+    .metric-updated {
+        animation: metricFlash 0.75s ease;
+    }
+
+    /* ==========================================================
+       SYNTHÈSE EXÉCUTIVE
+       ========================================================== */
+
+    .executive-text {
+        color: #344563;
+        font-size: 0.93rem;
+        line-height: 1.75;
+        white-space: pre-line;
+    }
+
+    .executive-panel {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .executive-panel::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 5px;
+        border-radius: 18px 0 0 18px;
+    }
+
+    .panel-success::before {
+        background: var(--dashboard-success);
+    }
+
+    .panel-primary::before {
+        background: var(--dashboard-primary);
+    }
+
+    .panel-warning::before {
+        background: var(--dashboard-warning);
+    }
+
+    .panel-danger::before {
+        background: var(--dashboard-danger);
+    }
+
+    .panel-info::before {
+        background: #0dcaf0;
+    }
+
+    /* ==========================================================
+       BARRE D’ACTIONS
+       ========================================================== */
+
+    .dashboard-toolbar {
+        position: sticky;
+        bottom: 14px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin-top: 24px;
+        padding: 13px 16px;
+        border: 1px solid rgba(222, 229, 239, 0.94);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 12px 34px rgba(23, 43, 77, 0.13);
+        backdrop-filter: blur(12px);
+    }
+
+    .toolbar-information {
+        color: var(--dashboard-muted);
+        font-size: 0.82rem;
+    }
+
+    .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .refresh-spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.48);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: dashboardSpin 0.75s linear infinite;
+    }
+
+    .is-refreshing .refresh-spinner {
+        display: inline-block;
+    }
+
+    /* ==========================================================
+       ALERTES
+       ========================================================== */
+
+    .dashboard-alert {
+        display: none;
+        margin-bottom: 20px;
+        padding: 12px 15px;
+        border-radius: 12px;
+        font-size: 0.88rem;
+    }
+
+    .dashboard-alert.is-visible {
+        display: block;
+    }
+
+    .dashboard-alert-error {
+        color: #842029;
+        border: 1px solid #f5c2c7;
+        background: #f8d7da;
+    }
+
+    /* ==========================================================
+       ANIMATIONS
+       ========================================================== */
+
+    @keyframes dashboardPulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.45;
+        }
+    }
+
+    @keyframes dashboardSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes metricFlash {
+        0% {
+            color: var(--dashboard-primary);
+            transform: scale(1.04);
+        }
+
+        100% {
+            color: var(--dashboard-dark);
+            transform: scale(1);
+        }
+    }
+
+    /* ==========================================================
+       RESPONSIVE
+       ========================================================== */
+
+    @media (max-width: 991.98px) {
+        .dashboard-header {
+            padding: 24px;
+        }
+
+        .week-summary {
+            width: 100%;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .sync-line {
+            justify-content: flex-start;
+        }
+
+        .status-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .executive-dashboard {
+            padding-right: 10px !important;
+            padding-left: 10px !important;
+        }
+
+        .dashboard-header {
+            border-radius: 17px;
+            padding: 20px;
+        }
+
+        .dashboard-card .card-body,
+        .kpi-card {
+            padding: 18px;
+        }
+
+        .kpi-card {
+            min-height: 142px;
+        }
+
+        .kpi-value {
+            font-size: 1.65rem;
+        }
+
+        .status-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-toolbar {
+            position: static;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .toolbar-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    /* ==========================================================
+       IMPRESSION
+       ========================================================== */
+
+    @media print {
+        @page {
+            size: A4 landscape;
+            margin: 8mm;
+        }
+
+        nav,
+        footer,
+        .no-print,
+        .dashboard-toolbar,
+        .dashboard-alert {
+            display: none !important;
+        }
+
+        body {
+            background: #ffffff !important;
+        }
+
+        .executive-dashboard {
+            max-width: none;
+            padding: 0 !important;
+        }
+
+        .dashboard-header {
+            padding: 18px;
+            box-shadow: none;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .dashboard-card,
+        .kpi-card {
+            break-inside: avoid;
+            box-shadow: none;
+        }
+
+        .kpi-card {
+            min-height: 115px;
+            padding: 14px;
+        }
+
+        .dashboard-card .card-body {
+            padding: 15px;
+        }
+
+        .row {
+            --bs-gutter-x: 0.65rem;
+            --bs-gutter-y: 0.65rem;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+            font-size: 0.96rem;
+        }
+
+        .executive-text {
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 executive-dashboard">
+
+    {% if metrics_error %}
+        <div class="alert alert-warning" role="alert">
+            <strong>Attention :</strong>
+            {{ metrics_error }}
+        </div>
+    {% endif %}
+
+    <div
+        id="dashboard-sync-error"
+        class="dashboard-alert dashboard-alert-error"
+        role="alert"
+    >
+        Impossible d’actualiser les données du tableau de bord.
+        Les dernières valeurs disponibles restent affichées.
+    </div>
+
+    <!-- ======================================================
+         EN-TÊTE
+         ====================================================== -->
+    <section class="dashboard-header mb-4">
+        <div class="dashboard-header-content">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="dashboard-project-label">
+                        La Poste Sénégal × YAAYESS
+                    </div>
+
+                    <h1 class="dashboard-title">
+                        Tableau de bord exécutif hebdomadaire
+                    </h1>
+
+                    <p class="dashboard-subtitle">
+                        Projet pilote de digitalisation des tontines,
+                        de l’épargne-crédit et de l’investissement
+                        communautaire
+                    </p>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="week-summary ms-lg-auto">
+                        <div class="week-number">
+                            Semaine {{ dashboard.week_number }}
+                        </div>
+
+                        <div class="week-period">
+                            Du {{ dashboard.period_start|date:"d/m/Y" }}
+                            au {{ dashboard.period_end|date:"d/m/Y" }}
+                        </div>
+
+                        <div class="sync-line">
+                            <span
+                                id="dashboard-sync-dot"
+                                class="sync-dot is-online"
+                                aria-hidden="true"
+                            ></span>
+
+                            <span>
+                                Mise à jour :
+                                <span id="dashboard-updated-at">
+                                    {% if live_metrics.updated_at %}
+                                        {{ live_metrics.updated_at }}
+                                    {% else %}
+                                        {{ dashboard.updated_at|date:"d/m/Y à H:i:s" }}
+                                    {% endif %}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ======================================================
+         ÉTAT ET AVANCEMENT
+         ====================================================== -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <article class="dashboard-card card">
+                <div class="card-body">
+                    <h2 class="section-title">
+                        État général du projet
+                    </h2>
+
+                    {% if dashboard.overall_status == "GREEN" %}
+                        <div class="status-box status-green">
+                            <span class="status-indicator"></span>
+                            <span>Projet conforme aux objectifs</span>
+                        </div>
+                    {% elif dashboard.overall_status == "YELLOW" %}
+                        <div class="status-box status-yellow">
+                            <span class="status-indicator"></span>
+                            <span>Vigilance requise</span>
+                        </div>
+                    {% else %}
+                        <div class="status-box status-red">
+                            <span class="status-indicator"></span>
+                            <span>Action immédiate nécessaire</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+        </div>
+
+        <div class="col-lg-8">
+            <article class="dashboard-card card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
+                        <h2 class="section-title">
+                            Avancement global
+                        </h2>
+
+                        <span class="progress-value">
+                            <span id="progress-percentage">
+                                {{ dashboard.progress_percentage|floatformat:0 }}
+                            </span>
+                            %
+                        </span>
+                    </div>
+
+                    <div
+                        class="progress dashboard-progress"
+                        role="progressbar"
+                        aria-label="Avancement global du projet"
+                        aria-valuenow="{{ dashboard.progress_percentage }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        <div
+                            id="progress-bar"
+                            class="progress-bar"
+                            style="width: {{ dashboard.progress_percentage }}%;"
+                        ></div>
+                    </div>
+
+                    <div class="status-grid">
+                        <div class="status-mini-card">
+                            <span class="status-mini-label">
+                                Planning
+                            </span>
+
+                            <span class="status-mini-value">
+                                {{ dashboard.get_planning_status_display }}
+                            </span>
+                        </div>
+
+                        <div class="status-mini-card">
+                            <span class="status-mini-label">
+                                Budget
+                            </span>
+
+                            <span class="status-mini-value">
+                                {{ dashboard.get_budget_status_display }}
+                            </span>
+                        </div>
+
+                        <div class="status-mini-card">
+                            <span class="status-mini-label">
+                                Qualité
+                            </span>
+
+                            <span class="status-mini-value">
+                                {{ dashboard.get_quality_status_display }}
+                            </span>
+                        </div>
+
+                        <div class="status-mini-card">
+                            <span class="status-mini-label">
+                                Plateforme
+                            </span>
+
+                            <span class="status-mini-value">
+                                {{ dashboard.get_platform_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         ADOPTION ET UTILISATION
+         ====================================================== -->
+    <div class="section-heading">
+        <div>
+            <h2 class="section-title">
+                Adoption et utilisation
+            </h2>
+
+            <div class="section-caption">
+                Situation globale et évolution durant la période du rapport.
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <!-- COMPTES ACTIFS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">👤</div>
+
+                <div class="kpi-label">
+                    Comptes actifs
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="total-active-accounts"
+                >
+                    {{ live_metrics.total_active_accounts|default_if_none:0|intcomma }}
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="accounts-created">
+                        {{ live_metrics.accounts_created|default_if_none:0|intcomma }}
+                    </strong>
+                    nouveau(x) compte(s) sur la période
+                </small>
+            </article>
+        </div>
+
+        <!-- UTILISATEURS CONNECTÉS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">⚡</div>
+
+                <div class="kpi-label">
+                    Utilisateurs connectés
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="active-users"
+                >
+                    {{ live_metrics.active_users|default_if_none:0|intcomma }}
+                </div>
+
+                <small class="kpi-detail">
+                    Utilisateur(s) connecté(s) durant la période
+                </small>
+            </article>
+        </div>
+
+        <!-- GROUPES ACTIFS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">👥</div>
+
+                <div class="kpi-label">
+                    Groupes actifs
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="total-groups"
+                >
+                    {{ live_metrics.total_groups|default_if_none:0|intcomma }}
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="groups-created">
+                        {{ live_metrics.groups_created|default_if_none:0|intcomma }}
+                    </strong>
+                    nouveau(x) groupe(s) sur la période
+                </small>
+            </article>
+        </div>
+
+        <!-- MEMBRES -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">🤝</div>
+
+                <div class="kpi-label">
+                    Membres inscrits
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="total-registered-members"
+                >
+                    {{ live_metrics.total_registered_members|default_if_none:0|intcomma }}
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="registered-members">
+                        {{ live_metrics.registered_members|default_if_none:0|intcomma }}
+                    </strong>
+                    nouveau(x) membre(s) sur la période
+                </small>
+            </article>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         FINANCE COMMUNAUTAIRE
+         ====================================================== -->
+    <div class="section-heading">
+        <div>
+            <h2 class="section-title">
+                Finance communautaire
+            </h2>
+
+            <div class="section-caption">
+                Opérations validées enregistrées dans la base de données.
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <!-- COTISATIONS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">💰</div>
+
+                <div class="kpi-label">
+                    Cotisations collectées
+                </div>
+
+                <div class="kpi-value">
+                    <span id="contributions-amount">
+                        {{ live_metrics.contributions_amount|default_if_none:0|floatformat:0|intcomma }}
+                    </span>
+
+                    <small>FCFA</small>
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="contributions-count">
+                        {{ live_metrics.contributions_count|default_if_none:0|intcomma }}
+                    </strong>
+                    opération(s) validée(s)
+                </small>
+            </article>
+        </div>
+
+        <!-- ÉPARGNE -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">🏦</div>
+
+                <div class="kpi-label">
+                    Épargne mobilisée
+                </div>
+
+                <div class="kpi-value">
+                    <span id="savings-amount">
+                        {{ live_metrics.savings_amount|default_if_none:0|floatformat:0|intcomma }}
+                    </span>
+
+                    <small>FCFA</small>
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="savings-count">
+                        {{ live_metrics.savings_deposits_count|default_if_none:0|intcomma }}
+                    </strong>
+                    dépôt(s) validé(s)
+                </small>
+            </article>
+        </div>
+
+        <!-- CRÉDITS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">📄</div>
+
+                <div class="kpi-label">
+                    Crédits accordés
+                </div>
+
+                <div class="kpi-value">
+                    <span id="credits-amount">
+                        {{ live_metrics.credits_amount|default_if_none:0|floatformat:0|intcomma }}
+                    </span>
+
+                    <small>FCFA</small>
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="credits-count">
+                        {{ live_metrics.credits_granted_count|default_if_none:0|intcomma }}
+                    </strong>
+                    crédit(s) approuvé(s)
+                </small>
+            </article>
+        </div>
+
+        <!-- INVESTISSEMENTS -->
+        <div class="col-sm-6 col-xl-3">
+            <article class="kpi-card">
+                <div class="kpi-icon">📈</div>
+
+                <div class="kpi-label">
+                    Investissements
+                </div>
+
+                <div class="kpi-value">
+                    <span id="investments-amount">
+                        {{ live_metrics.investments_amount|default_if_none:0|floatformat:0|intcomma }}
+                    </span>
+
+                    <small>FCFA</small>
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="investments-count">
+                        {{ live_metrics.investments_count|default_if_none:0|intcomma }}
+                    </strong>
+                    projet(s)
+                </small>
+            </article>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         OPÉRATIONS ET PERFORMANCE TECHNIQUE
+         ====================================================== -->
+    <div class="section-heading">
+        <div>
+            <h2 class="section-title">
+                Opérations et performance technique
+            </h2>
+
+            <div class="section-caption">
+                Indicateurs opérationnels et techniques du pilote.
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <!-- REMBOURSEMENTS -->
+        <div class="col-sm-6 col-xl">
+            <article class="kpi-card">
+                <div class="kpi-icon">↩️</div>
+
+                <div class="kpi-label">
+                    Remboursements
+                </div>
+
+                <div class="kpi-value">
+                    <span id="repayments-amount">
+                        {{ live_metrics.repayments_amount|default_if_none:0|floatformat:0|intcomma }}
+                    </span>
+
+                    <small>FCFA</small>
+                </div>
+
+                <small class="kpi-detail">
+                    <strong id="repayments-count">
+                        {{ live_metrics.repayments_count|default_if_none:0|intcomma }}
+                    </strong>
+                    remboursement(s) validé(s)
+                </small>
+            </article>
+        </div>
+
+        <!-- DISPONIBILITÉ -->
+        <div class="col-sm-6 col-xl">
+            <article class="kpi-card">
+                <div class="kpi-icon">🟢</div>
+
+                <div class="kpi-label">
+                    Disponibilité
+                </div>
+
+                <div class="kpi-value">
+                    <span id="platform-availability">
+                        {{ live_metrics.platform_availability|default_if_none:0|floatformat:2 }}
+                    </span>
+
+                    <small>%</small>
+                </div>
+
+                <small class="kpi-detail">
+                    Disponibilité déclarée du service
+                </small>
+            </article>
+        </div>
+
+        <!-- TRANSACTIONS RÉUSSIES -->
+        <div class="col-sm-6 col-xl">
+            <article class="kpi-card">
+                <div class="kpi-icon">✅</div>
+
+                <div class="kpi-label">
+                    Transactions réussies
+                </div>
+
+                <div class="kpi-value">
+                    <span id="transaction-success-rate">
+                        {{ live_metrics.successful_transaction_rate|default_if_none:0|floatformat:2 }}
+                    </span>
+
+                    <small>%</small>
+                </div>
+
+                <small class="kpi-detail">
+                    Opérations validées sur opérations totales
+                </small>
+            </article>
+        </div>
+
+        <!-- TEMPS DE RÉPONSE -->
+        <div class="col-sm-6 col-xl">
+            <article class="kpi-card">
+                <div class="kpi-icon">⏱️</div>
+
+                <div class="kpi-label">
+                    Temps de réponse
+                </div>
+
+                <div class="kpi-value">
+                    <span id="average-response-time">
+                        {{ live_metrics.average_response_time|default_if_none:0|floatformat:2 }}
+                    </span>
+
+                    <small>s</small>
+                </div>
+
+                <small class="kpi-detail">
+                    Indicateur technique renseigné
+                </small>
+            </article>
+        </div>
+
+        <!-- INCIDENTS -->
+        <div class="col-sm-6 col-xl">
+            <article class="kpi-card">
+                <div class="kpi-icon">🚨</div>
+
+                <div class="kpi-label">
+                    Incidents critiques
+                </div>
+
+                <div
+                    class="kpi-value"
+                    id="critical-incidents"
+                >
+                    {{ live_metrics.critical_incidents|default_if_none:0 }}
+                </div>
+
+                <small class="kpi-detail">
+                    Incidents majeurs déclarés
+                </small>
+            </article>
+        </div>
+    </div>
+
+    <!-- ======================================================
+         SYNTHÈSE EXÉCUTIVE
+         ====================================================== -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <article class="dashboard-card card executive-panel panel-primary">
+                <div class="card-body">
+                    <h2 class="section-title">
+                        Faits marquants
+                    </h2>
+
+                    <div class="executive-text">
+                        {{ dashboard.highlights|default:"Aucun fait marquant renseigné." }}
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-lg-6">
+            <article class="dashboard-card card executive-panel panel-success">
+                <div class="card-body">
+                    <h2 class="section-title">
+                        Réalisations majeures
+                    </h2>
+
+                    <div class="executive-text">
+                        {{ dashboard.achievements|default:"Aucune réalisation renseignée." }}
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <article class="dashboard-card card executive-panel panel-warning">
+                <div class="card-body">
+                    <h2 class="section-title">
+                        Risques majeurs
+                    </h2>
+
+                    <div class="executive-text">
+                        {{ dashboard.major_risks|default:"Aucun risque majeur signalé." }}
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-lg-6">
+            <article class="dashboard-card card executive-panel panel-danger">
+                <div class="card-body">
+                    <h2 class="section-title">
+                        Décisions attendues
+                    </h2>
+
+                    <div class="executive-text">
+                        {{ dashboard.expected_decisions|default:"Aucune décision en attente." }}
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <article class="dashboard-card card executive-panel panel-info mb-4">
+        <div class="card-body">
+            <h2 class="section-title">
+                Priorités de la semaine suivante
+            </h2>
+
+            <div class="executive-text">
+                {{ dashboard.next_week_priorities|default:"Aucune priorité renseignée." }}
+            </div>
+        </div>
+    </article>
+
+    {% if dashboard.project_manager_comment %}
+        <article class="dashboard-card card mb-4">
+            <div class="card-body">
+                <h2 class="section-title">
+                    Appréciation du chef de projet
+                </h2>
+
+                <div class="executive-text">
+                    {{ dashboard.project_manager_comment }}
+                </div>
+            </div>
+        </article>
+    {% endif %}
+
+    <!-- ======================================================
+         BARRE D’ACTIONS
+         ====================================================== -->
+    <div class="dashboard-toolbar no-print">
+        <div class="toolbar-information">
+            Actualisation automatique toutes les
+            <strong>{{ refresh_interval_seconds|default:15 }} secondes</strong>.
+            Les données stratégiques restent issues du rapport publié.
+        </div>
+
+        <div class="toolbar-actions">
+            <button
+                id="refresh-dashboard-button"
+                type="button"
+                class="btn btn-primary btn-sm"
+            >
+                <span class="refresh-spinner me-1"></span>
+                <span>Actualiser</span>
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                onclick="window.print()"
+            >
+                Imprimer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        "use strict";
+
+        const dataUrl =
+            "{% url 'pilotage:executive_dashboard_data' %}";
+
+        const refreshIntervalMilliseconds =
+            {{ refresh_interval_seconds|default:15 }} * 1000;
+
+        const refreshButton = document.getElementById(
+            "refresh-dashboard-button"
+        );
+
+        const syncDot = document.getElementById(
+            "dashboard-sync-dot"
+        );
+
+        const syncError = document.getElementById(
+            "dashboard-sync-error"
+        );
+
+        let refreshInProgress = false;
+
+        function formatInteger(value) {
+            const parsedValue = Number(value ?? 0);
+
+            return new Intl.NumberFormat("fr-FR", {
+                maximumFractionDigits: 0
+            }).format(
+                Number.isFinite(parsedValue) ? parsedValue : 0
+            );
+        }
+
+        function formatDecimal(value, digits = 2) {
+            const parsedValue = Number(value ?? 0);
+
+            return new Intl.NumberFormat("fr-FR", {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            }).format(
+                Number.isFinite(parsedValue) ? parsedValue : 0
+            );
+        }
+
+        function setSyncState(state) {
+            if (!syncDot) {
+                return;
+            }
+
+            syncDot.classList.remove(
+                "is-online",
+                "is-loading",
+                "is-offline"
+            );
+
+            if (state === "loading") {
+                syncDot.classList.add("is-loading");
+            } else if (state === "offline") {
+                syncDot.classList.add("is-offline");
+            } else {
+                syncDot.classList.add("is-online");
+            }
+        }
+
+        function showSyncError(show) {
+            if (!syncError) {
+                return;
+            }
+
+            syncError.classList.toggle(
+                "is-visible",
+                Boolean(show)
+            );
+        }
+
+        function setRefreshing(isRefreshing) {
+            refreshInProgress = isRefreshing;
+
+            if (refreshButton) {
+                refreshButton.disabled = isRefreshing;
+
+                refreshButton.classList.toggle(
+                    "is-refreshing",
+                    isRefreshing
+                );
+            }
+
+            setSyncState(
+                isRefreshing ? "loading" : "online"
+            );
+        }
+
+        function animateElement(element) {
+            if (!element) {
+                return;
+            }
+
+            element.classList.remove("metric-updated");
+
+            void element.offsetWidth;
+
+            element.classList.add("metric-updated");
+        }
+
+        function updateText(elementId, formattedValue) {
+            const element = document.getElementById(elementId);
+
+            if (!element) {
+                return;
+            }
+
+            const newText = String(formattedValue);
+
+            if (element.textContent.trim() !== newText) {
+                element.textContent = newText;
+                animateElement(element);
+            }
+        }
+
+        function updateProgress(value) {
+            const parsedValue = Math.max(
+                0,
+                Math.min(100, Number(value ?? 0))
+            );
+
+            updateText(
+                "progress-percentage",
+                formatInteger(parsedValue)
+            );
+
+            const progressBar = document.getElementById(
+                "progress-bar"
+            );
+
+            if (progressBar) {
+                progressBar.style.width = `${parsedValue}%`;
+
+                progressBar.parentElement?.setAttribute(
+                    "aria-valuenow",
+                    String(parsedValue)
+                );
+            }
+        }
+
+        function updateDashboard(metrics, payload) {
+            updateText(
+                "total-active-accounts",
+                formatInteger(metrics.total_active_accounts)
+            );
+
+            updateText(
+                "accounts-created",
+                formatInteger(metrics.accounts_created)
+            );
+
+            updateText(
+                "active-users",
+                formatInteger(metrics.active_users)
+            );
+
+            updateText(
+                "total-groups",
+                formatInteger(metrics.total_groups)
+            );
+
+            updateText(
+                "groups-created",
+                formatInteger(metrics.groups_created)
+            );
+
+            updateText(
+                "total-registered-members",
+                formatInteger(metrics.total_registered_members)
+            );
+
+            updateText(
+                "registered-members",
+                formatInteger(metrics.registered_members)
+            );
+
+            updateText(
+                "contributions-count",
+                formatInteger(metrics.contributions_count)
+            );
+
+            updateText(
+                "contributions-amount",
+                formatInteger(metrics.contributions_amount)
+            );
+
+            updateText(
+                "savings-count",
+                formatInteger(metrics.savings_deposits_count)
+            );
+
+            updateText(
+                "savings-amount",
+                formatInteger(metrics.savings_amount)
+            );
+
+            updateText(
+                "credits-count",
+                formatInteger(metrics.credits_granted_count)
+            );
+
+            updateText(
+                "credits-amount",
+                formatInteger(metrics.credits_amount)
+            );
+
+            updateText(
+                "repayments-count",
+                formatInteger(metrics.repayments_count)
+            );
+
+            updateText(
+                "repayments-amount",
+                formatInteger(metrics.repayments_amount)
+            );
+
+            updateText(
+                "investments-count",
+                formatInteger(metrics.investments_count)
+            );
+
+            updateText(
+                "investments-amount",
+                formatInteger(metrics.investments_amount)
+            );
+
+            updateText(
+                "platform-availability",
+                formatDecimal(
+                    metrics.platform_availability,
+                    2
+                )
+            );
+
+            updateText(
+                "transaction-success-rate",
+                formatDecimal(
+                    metrics.successful_transaction_rate,
+                    2
+                )
+            );
+
+            updateText(
+                "average-response-time",
+                formatDecimal(
+                    metrics.average_response_time,
+                    2
+                )
+            );
+
+            updateText(
+                "critical-incidents",
+                formatInteger(metrics.critical_incidents)
+            );
+
+            updateText(
+                "dashboard-updated-at",
+                metrics.updated_at
+            );
+
+            if (
+                payload.dashboard &&
+                payload.dashboard.progress_percentage !== undefined &&
+                payload.dashboard.progress_percentage !== null
+            ) {
+                updateProgress(
+                    payload.dashboard.progress_percentage
+                );
+            }
+        }
+
+        async function refreshExecutiveDashboard() {
+            if (refreshInProgress) {
+                return;
+            }
+
+            setRefreshing(true);
+            showSyncError(false);
+
+            try {
+                const response = await fetch(dataUrl, {
+                    method: "GET",
+                    credentials: "same-origin",
+                    cache: "no-store",
+                    headers: {
+                        "Accept": "application/json",
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                });
+
+                if (response.status === 401) {
+                    throw new Error(
+                        "La session utilisateur a expiré."
+                    );
+                }
+
+                if (response.status === 403) {
+                    throw new Error(
+                        "Vous n’êtes pas autorisé à consulter ces données."
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Erreur HTTP ${response.status}`
+                    );
+                }
+
+                const payload = await response.json();
+
+                if (
+                    !payload.success ||
+                    !payload.metrics
+                ) {
+                    throw new Error(
+                        "Réponse invalide reçue du serveur."
+                    );
+                }
+
+                updateDashboard(
+                    payload.metrics,
+                    payload
+                );
+
+                setSyncState("online");
+            } catch (error) {
+                console.error(
+                    "Actualisation du tableau de bord impossible :",
+                    error
+                );
+
+                showSyncError(true);
+                setSyncState("offline");
+            } finally {
+                refreshInProgress = false;
+
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+
+                    refreshButton.classList.remove(
+                        "is-refreshing"
+                    );
+                }
+            }
+        }
+
+        if (refreshButton) {
+            refreshButton.addEventListener(
+                "click",
+                refreshExecutiveDashboard
+            );
+        }
+
+        refreshExecutiveDashboard();
+
+        window.setInterval(
+            refreshExecutiveDashboard,
+            refreshIntervalMilliseconds
+        );
+    });
+</script>
+{% endblock %}

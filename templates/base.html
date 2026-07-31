@@ -142,160 +142,276 @@ font-size:1.25rem;
     <img src="{% static 'images/whatsapp.png' %}" alt="WhatsApp">
 </a>
 
+{% load static %}
+
 <!-- NAVBAR -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-success fixed-top shadow-sm">
 
-<div class="container">
+    <div class="container">
 
-<a class="navbar-brand d-flex align-items-center" href="{% url 'landing' %}">
-    <img src="{% static 'img/logo.png' %}" alt="YaayESS" height="40" class="me-2">
-    <span>YaayESS</span>
-</a>
+        <a
+            class="navbar-brand d-flex align-items-center"
+            href="{% url 'landing' %}"
+        >
+            <img
+                src="{% static 'img/logo.png' %}"
+                alt="YaayESS"
+                height="40"
+                class="me-2"
+            >
+            <span>YaayESS</span>
+        </a>
 
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Afficher le menu"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-<span class="navbar-toggler-icon"></span>
-</button>
+        <div
+            class="collapse navbar-collapse"
+            id="navbarNav"
+        >
 
-<div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
 
-<ul class="navbar-nav ms-auto align-items-lg-center">
+                {% if user.is_authenticated %}
 
-{% if user.is_authenticated %}
+                    <!-- =========================================
+                         DASHBOARD SELON OPTION UTILISATEUR
+                         ========================================= -->
 
-<!-- DASHBOARD SELON OPTION UTILISATEUR -->
+                    {% if user.option == "1" %}
 
-{% if user.option == "1" %}
+                        <li class="nav-item">
+                            <a
+                                class="nav-link"
+                                href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
+                            >
+                                <i class="fas fa-users me-1"></i>
+                                Dashboard Tontine
+                            </a>
+                        </li>
 
-<li class="nav-item">
-<a class="nav-link" href="{% url 'cotisationtontine:dashboard_tontine_simple' %}">
-<i class="fas fa-users me-1"></i>
-Dashboard Tontine
-</a>
-</li>
+                    {% elif user.option == "2" %}
 
-{% elif user.option == "2" %}
+                        <li class="nav-item">
+                            <a
+                                class="nav-link"
+                                href="{% url 'epargnecredit:dashboard_epargne_credit' %}"
+                            >
+                                <i class="fas fa-chart-line me-1"></i>
+                                Dashboard Épargne
+                            </a>
+                        </li>
 
-<li class="nav-item">
-<a class="nav-link" href="{% url 'epargnecredit:dashboard_epargne_credit' %}">
-<i class="fas fa-chart-line me-1"></i>
-Dashboard Épargne
-</a>
-</li>
-
-{% endif %}
-
-
-<!-- DASHBOARD SAAS (SUPER ADMIN SEULEMENT) -->
-
-{% if user.is_super_admin %}
-
-<li class="nav-item">
-<a class="nav-link text-warning fw-bold" href="{% url 'accounts:saas_dashboard' %}">
-<i class="fas fa-chart-pie me-1"></i>
-SaaS Dashboard
-</a>
-</li>
-
-{% endif %}
-
-{% if user.is_superuser %}
-
-<li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle text-warning" href="#" data-bs-toggle="dropdown">
-        💰 Compta
-    </a>
-
-    <ul class="dropdown-menu dropdown-menu-end shadow">
-
-        <li>
-            <a class="dropdown-item" href="{% url 'accounts:compta_dashboard' %}">
-                📊 Dashboard
-            </a>
-        </li>
-
-        <li>
-            <a class="dropdown-item" href="{% url 'accounts:invoices_dashboard' %}">
-                📄 Factures
-            </a>
-        </li>
-
-    </ul>
-</li>
-
-{% endif %}
-
-<!-- MENU UTILISATEUR -->
-<li class="nav-item dropdown">
-
-<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-<i class="fas fa-user-circle me-1"></i>
-{{ user.nom|default:user.phone }}
-</a>
-
-<ul class="dropdown-menu dropdown-menu-end shadow">
-
-<li>
-<a class="dropdown-item" href="#">
-<i class="fas fa-user me-2"></i>
-Profil
-</a>
-</li>
-
-<li>
-<a class="dropdown-item" href="#">
-<i class="fas fa-cog me-2"></i>
-Paramètres
-</a>
-</li>
-
-<li>
-<a class="dropdown-item" href="{% url 'accounts:mes_recus' %}">
-<i class="fas fa-file-invoice me-2"></i>
-Mes reçus
-</a>
-</li>
-
-<li><hr class="dropdown-divider"></li>
-
-<li>
-<a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
-<i class="fas fa-sign-out-alt me-2"></i>
-Déconnexion
-</a>
-</li>
-
-</ul>
-
-</li>
+                    {% endif %}
 
 
+                    <!-- =========================================
+                         DASHBOARD SAAS
+                         SUPER ADMIN UNIQUEMENT
+                         ========================================= -->
 
-{% else %}
+                    {% if user.is_super_admin %}
 
-<li class="nav-item">
-<a class="nav-link" href="{% url 'accounts:login' %}">
-<i class="fas fa-sign-in-alt me-1"></i>
-Connexion
-</a>
-</li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link text-warning fw-bold"
+                                href="{% url 'accounts:saas_dashboard' %}"
+                            >
+                                <i class="fas fa-chart-pie me-1"></i>
+                                SaaS Dashboard
+                            </a>
+                        </li>
 
-<li class="nav-item">
-<a class="nav-link" href="{% url 'accounts:signup' %}">
-<i class="fas fa-user-plus me-1"></i>
-Inscription
-</a>
-</li>
+                    {% endif %}
 
-{% endif %}
 
-</ul>
+                    <!-- =========================================
+                         TABLEAU DE BORD EXÉCUTIF
+                         DÉCIDEURS UNIQUEMENT
+                         ========================================= -->
 
-</div>
+                    {% if perms.pilotage.access_executive_dashboard %}
 
-</div>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link text-info fw-bold
+                                {% if request.resolver_match.namespace == 'pilotage' %}
+                                    active
+                                {% endif %}"
+                                href="{% url 'pilotage:executive_dashboard' %}"
+                                title="Tableau de bord réservé aux décideurs"
+                            >
+                                <i class="fas fa-chart-bar me-1"></i>
+                                Pilotage
+                            </a>
+                        </li>
+
+                    {% endif %}
+
+
+                    <!-- =========================================
+                         COMPTABILITÉ
+                         SUPERUTILISATEUR UNIQUEMENT
+                         ========================================= -->
+
+                    {% if user.is_superuser %}
+
+                        <li class="nav-item dropdown">
+
+                            <a
+                                class="nav-link dropdown-toggle text-warning"
+                                href="#"
+                                role="button"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                <i class="fas fa-coins me-1"></i>
+                                Compta
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="{% url 'accounts:compta_dashboard' %}"
+                                    >
+                                        <i class="fas fa-chart-bar me-2"></i>
+                                        Dashboard
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="{% url 'accounts:invoices_dashboard' %}"
+                                    >
+                                        <i class="fas fa-file-invoice me-2"></i>
+                                        Factures
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </li>
+
+                    {% endif %}
+
+
+                    <!-- =========================================
+                         MENU UTILISATEUR
+                         ========================================= -->
+
+                    <li class="nav-item dropdown">
+
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ user.nom|default:user.phone }}
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user me-2"></i>
+                                    Profil
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-cog me-2"></i>
+                                    Paramètres
+                                </a>
+                            </li>
+
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="{% url 'accounts:mes_recus' %}"
+                                >
+                                    <i class="fas fa-file-invoice me-2"></i>
+                                    Mes reçus
+                                </a>
+                            </li>
+
+                            {% if perms.pilotage.access_executive_dashboard %}
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="{% url 'pilotage:executive_dashboard' %}"
+                                    >
+                                        <i class="fas fa-chart-bar me-2"></i>
+                                        Tableau de bord exécutif
+                                    </a>
+                                </li>
+
+                            {% endif %}
+
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+
+                            <li>
+                                <a
+                                    class="dropdown-item text-danger"
+                                    href="{% url 'accounts:logout' %}"
+                                >
+                                    <i class="fas fa-sign-out-alt me-2"></i>
+                                    Déconnexion
+                                </a>
+                            </li>
+
+                        </ul>
+                    </li>
+
+                {% else %}
+
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            href="{% url 'accounts:login' %}"
+                        >
+                            <i class="fas fa-sign-in-alt me-1"></i>
+                            Connexion
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            href="{% url 'accounts:signup' %}"
+                        >
+                            <i class="fas fa-user-plus me-1"></i>
+                            Inscription
+                        </a>
+                    </li>
+
+                {% endif %}
+
+            </ul>
+
+        </div>
+
+    </div>
 
 </nav>
+
 <!-- MAIN -->
 
 <main class="container my-4">

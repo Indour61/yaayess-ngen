@@ -12,6 +12,9 @@ from accounts.jwt_serializer import PhoneTokenObtainPairSerializer
 
 from core.views import robots_txt
 
+from django.contrib import admin
+from django.urls import include, path
+
 
 # 🔐 JWT personnalisé
 class PhoneTokenObtainPairView(TokenObtainPairView):
@@ -45,12 +48,16 @@ urlpatterns = [
 
 
     path('legal/', include('legal.urls')),
+
+    path(
+        "pilotage/",
+        include("pilotage.urls"),
+    ),
+
 ]
 
 
 # 📁 MEDIA FILES
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
 

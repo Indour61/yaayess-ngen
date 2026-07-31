@@ -118,11 +118,13 @@ INSTALLED_APPS = [
     "django_countries",
     # Apps locales
     'cotisationtontine.apps.CotisationtontineConfig',
+    'pilotage',
 
     'epargnecredit',
     'legal',
     'rest_framework',
     'widget_tweaks',
+
 
     # Outils
     'whitenoise.runserver_nostatic',
@@ -130,6 +132,7 @@ INSTALLED_APPS = [
     "corsheaders",
     'rest_framework_simplejwt.token_blacklist',
     'accounts.apps.AccountsConfig',
+
 
 ]
 
