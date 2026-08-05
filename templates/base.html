@@ -258,6 +258,107 @@ font-size:1.25rem;
                     {% endif %}
 
 
+<!-- =========================================
+     PORTAIL GOUVERNANCE
+     UTILISATEURS AUTORISÉS
+     ========================================= -->
+
+{% if perms.governance.view_governanceinstance or perms.governance.view_governancetask or perms.governance.view_governancedecisionlog %}
+
+    <li class="nav-item dropdown">
+
+        <a
+            class="nav-link dropdown-toggle fw-bold
+            {% if request.resolver_match.namespace == 'governance' %}
+                active
+            {% endif %}"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            title="Gouvernance des investissements communautaires"
+        >
+            <i class="fas fa-sitemap me-1"></i>
+            Gouvernance
+        </a>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+
+            {% if perms.governance.view_governanceinstance %}
+
+                <li>
+                    <a
+                        class="dropdown-item
+                        {% if request.resolver_match.url_name == 'dashboard' %}
+                            active
+                        {% endif %}"
+                        href="{% url 'governance:dashboard' %}"
+                    >
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Dashboard Gouvernance
+                    </a>
+                </li>
+
+                <li>
+                    <a
+                        class="dropdown-item
+                        {% if request.resolver_match.url_name == 'instance_list' %}
+                            active
+                        {% endif %}"
+                        href="{% url 'governance:instance_list' %}"
+                    >
+                        <i class="fas fa-folder-open me-2"></i>
+                        Dossiers de gouvernance
+                    </a>
+                </li>
+
+            {% endif %}
+
+            {% if perms.governance.view_governancetask %}
+
+                <li>
+                    <a
+                        class="dropdown-item
+                        {% if request.resolver_match.url_name == 'task_list' %}
+                            active
+                        {% endif %}"
+                        href="{% url 'governance:task_list' %}"
+                    >
+                        <i class="fas fa-tasks me-2"></i>
+                        Tâches de gouvernance
+                    </a>
+                </li>
+
+            {% endif %}
+
+            {% if perms.governance.view_governancedecisionlog %}
+
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <li>
+                    <a
+                        class="dropdown-item
+                        {% if request.resolver_match.url_name == 'decision_log_list' %}
+                            active
+                        {% endif %}"
+                        href="{% url 'governance:decision_log_list' %}"
+                    >
+                        <i class="fas fa-history me-2"></i>
+                        Journal complet
+                    </a>
+                </li>
+
+            {% endif %}
+
+        </ul>
+
+    </li>
+
+{% endif %}
+
+
                     <!-- =========================================
                          COMPTABILITÉ
                          SUPERUTILISATEUR UNIQUEMENT
@@ -358,6 +459,20 @@ font-size:1.25rem;
                                     >
                                         <i class="fas fa-chart-bar me-2"></i>
                                         Tableau de bord exécutif
+                                    </a>
+                                </li>
+
+                            {% endif %}
+
+                            {% if perms.governance.view_governanceinstance %}
+
+                                <li>
+                                    <a
+                                        class="dropdown-item"
+                                        href="{% url 'governance:dashboard' %}"
+                                    >
+                                        <i class="fas fa-sitemap me-2"></i>
+                                        Dashboard Gouvernance
                                     </a>
                                 </li>
 

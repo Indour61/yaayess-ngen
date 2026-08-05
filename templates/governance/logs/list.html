@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}
+Journal de gouvernance | YAAYESS
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gov-log-page {
+        background: #f8fafc;
+        min-height: 100vh;
+        padding: 1.5rem 0 3rem;
+    }
+
+    .gov-log-container {
+        width: min(1600px, calc(100% - 2rem));
+        margin: 0 auto;
+    }
+
+    .gov-log-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-log-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: 2rem;
+        font-weight: 800;
+    }
+
+    .gov-log-subtitle {
+        margin: .35rem 0 0;
+        color: #64748b;
+    }
+
+    .gov-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .07);
+    }
+
+    .gov-filter-card {
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-filter-grid {
+        display: grid;
+        grid-template-columns:
+            minmax(230px, 2fr)
+            repeat(4, minmax(150px, 1fr))
+            auto;
+        gap: .75rem;
+        align-items: end;
+    }
+
+    .gov-field label {
+        display: block;
+        margin-bottom: .35rem;
+        color: #64748b;
+        font-size: .74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .gov-field input,
+    .gov-field select {
+        width: 100%;
+        min-height: 42px;
+        padding: .55rem .7rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .gov-actions {
+        display: flex;
+        gap: .5rem;
+    }
+
+    .gov-btn {
+        min-height: 42px;
+        padding: .6rem .9rem;
+        border: 0;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gov-btn-primary {
+        color: #fff;
+        background: #0f766e;
+    }
+
+    .gov-btn-light {
+        color: #0f172a;
+        background: #e2e8f0;
+    }
+
+    .gov-card-header {
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .gov-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .gov-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .88rem;
+    }
+
+    .gov-table th,
+    .gov-table td {
+        padding: .78rem .7rem;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+        text-align: left;
+    }
+
+    .gov-table th {
+        color: #64748b;
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        white-space: nowrap;
+    }
+
+    .gov-link {
+        color: #115e59;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .gov-badge {
+        display: inline-flex;
+        padding: .28rem .58rem;
+        border-radius: 999px;
+        font-size: .73rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .gov-success { color: #166534; background: #dcfce7; }
+    .gov-warning { color: #92400e; background: #fef3c7; }
+    .gov-danger { color: #991b1b; background: #fee2e2; }
+    .gov-info { color: #1e40af; background: #dbeafe; }
+    .gov-muted { color: #334155; background: #e2e8f0; }
+
+    .gov-score {
+        font-weight: 900;
+        color: #0f172a;
+    }
+
+    .gov-pagination {
+        padding: 1rem;
+        display: flex;
+        justify-content: center;
+        gap: .4rem;
+        flex-wrap: wrap;
+    }
+
+    .gov-pagination a,
+    .gov-pagination span {
+        min-width: 38px;
+        min-height: 38px;
+        padding: .45rem .65rem;
+        border-radius: 8px;
+        text-align: center;
+        text-decoration: none;
+        border: 1px solid #cbd5e1;
+    }
+
+    .gov-pagination .active {
+        color: #fff;
+        background: #0f766e;
+        border-color: #0f766e;
+    }
+
+    .gov-empty {
+        padding: 2rem;
+        text-align: center;
+        color: #64748b;
+    }
+
+    @media (max-width: 1200px) {
+        .gov-filter-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 650px) {
+        .gov-filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .gov-log-header {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gov-log-page">
+    <div class="gov-log-container">
+
+        <header class="gov-log-header">
+            <div>
+                <h1 class="gov-log-title">Journal complet de gouvernance</h1>
+                <p class="gov-log-subtitle">
+                    Traçabilité des évaluations, décisions et transitions
+                    du moteur de gouvernance.
+                </p>
+            </div>
+
+            <a
+                href="{% url 'governance:dashboard' %}"
+                class="gov-btn gov-btn-light"
+            >
+                Retour au dashboard
+            </a>
+        </header>
+
+        <section class="gov-card gov-filter-card">
+            <form method="get" class="gov-filter-grid">
+
+                <div class="gov-field">
+                    <label for="q">Recherche</label>
+                    <input
+                        type="search"
+                        id="q"
+                        name="q"
+                        value="{{ search }}"
+                        placeholder="Référence, projet, acteur..."
+                    >
+                </div>
+
+                <div class="gov-field">
+                    <label for="decision">Décision</label>
+                    <select id="decision" name="decision">
+                        <option value="">Toutes</option>
+                        {% for value, label in decision_choices %}
+                            <option
+                                value="{{ value }}"
+                                {% if selected_decision == value %}selected{% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="gov-field">
+                    <label for="application_status">Application</label>
+                    <select
+                        id="application_status"
+                        name="application_status"
+                    >
+                        <option value="">Tous les statuts</option>
+                        {% for value, label in application_status_choices %}
+                            <option
+                                value="{{ value }}"
+                                {% if selected_application_status == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="gov-field">
+                    <label for="workflow">Workflow</label>
+                    <select id="workflow" name="workflow">
+                        <option value="">Tous les workflows</option>
+                        {% for item in workflows %}
+                            <option
+                                value="{{ item.workflow_id }}"
+                                {% if selected_workflow_id == item.workflow_id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ item.workflow__name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="gov-field">
+                    <label for="eligible">Éligibilité</label>
+                    <select id="eligible" name="eligible">
+                        <option value="">Tous</option>
+                        <option
+                            value="yes"
+                            {% if selected_eligible == "yes" %}selected{% endif %}
+                        >
+                            Éligible
+                        </option>
+                        <option
+                            value="no"
+                            {% if selected_eligible == "no" %}selected{% endif %}
+                        >
+                            Non éligible
+                        </option>
+                    </select>
+                </div>
+
+                <div class="gov-actions">
+                    <button type="submit" class="gov-btn gov-btn-primary">
+                        Filtrer
+                    </button>
+
+                    <a
+                        href="{% url 'governance:decision_log_list' %}"
+                        class="gov-btn gov-btn-light"
+                    >
+                        Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </section>
+
+        <section class="gov-card">
+
+            <div class="gov-card-header">
+                <strong>{{ total_results }} décision(s)</strong>
+                <span>
+                    Page {{ page_obj.number }}
+                    sur {{ page_obj.paginator.num_pages }}
+                </span>
+            </div>
+
+            <div class="gov-table-wrapper">
+                <table class="gov-table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Projet</th>
+                            <th>Décision</th>
+                            <th>Application</th>
+                            <th>Étape</th>
+                            <th>Score</th>
+                            <th>Éligible</th>
+                            <th>Acteur</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for log in logs %}
+                            <tr>
+                                <td>
+                                    <a
+                                        class="gov-link"
+                                        href="{% url 'governance:decision_log_detail' log.pk %}"
+                                    >
+                                        {{ log.reference }}
+                                    </a>
+                                </td>
+
+                                <td>
+                                    <strong>{{ log.project.title }}</strong>
+                                    <div>{{ log.project.reference }}</div>
+                                </td>
+
+                                <td>
+                                    {% if log.decision_code == "ADVANCE" or log.decision_code == "APPROVE" %}
+                                        <span class="gov-badge gov-success">
+                                            {{ log.get_decision_code_display }}
+                                        </span>
+                                    {% elif log.decision_code == "REQUEST_INFO" or log.decision_code == "MANUAL_REVIEW" %}
+                                        <span class="gov-badge gov-warning">
+                                            {{ log.get_decision_code_display }}
+                                        </span>
+                                    {% elif log.decision_code == "BLOCK" or log.decision_code == "REJECT" %}
+                                        <span class="gov-badge gov-danger">
+                                            {{ log.get_decision_code_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="gov-badge gov-muted">
+                                            {{ log.get_decision_code_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if log.application_status == "APPLIED" %}
+                                        <span class="gov-badge gov-success">
+                                            {{ log.get_application_status_display }}
+                                        </span>
+                                    {% elif log.application_status == "FAILED" %}
+                                        <span class="gov-badge gov-danger">
+                                            {{ log.get_application_status_display }}
+                                        </span>
+                                    {% elif log.application_status == "NOT_APPLIED" %}
+                                        <span class="gov-badge gov-warning">
+                                            {{ log.get_application_status_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="gov-badge gov-info">
+                                            {{ log.get_application_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>{{ log.from_stage.name|default:"—" }}</td>
+
+                                <td class="gov-score">
+                                    {{ log.global_score|floatformat:2 }} %
+                                </td>
+
+                                <td>
+                                    {% if log.eligible %}
+                                        <span class="gov-badge gov-success">Oui</span>
+                                    {% else %}
+                                        <span class="gov-badge gov-danger">Non</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ log.actor|default:"Moteur automatique" }}
+                                </td>
+
+                                <td>
+                                    {{ log.evaluated_at|date:"d/m/Y H:i" }}
+                                </td>
+                            </tr>
+
+                        {% empty %}
+                            <tr>
+                                <td colspan="9" class="gov-empty">
+                                    Aucune décision ne correspond aux filtres.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+                <nav class="gov-pagination">
+
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1&q={{ search|urlencode }}">
+                            Première
+                        </a>
+
+                        <a href="?page={{ page_obj.previous_page_number }}&q={{ search|urlencode }}">
+                            Précédente
+                        </a>
+                    {% endif %}
+
+                    <span class="active">
+                        {{ page_obj.number }}
+                    </span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}&q={{ search|urlencode }}">
+                            Suivante
+                        </a>
+
+                        <a href="?page={{ page_obj.paginator.num_pages }}&q={{ search|urlencode }}">
+                            Dernière
+                        </a>
+                    {% endif %}
+                </nav>
+            {% endif %}
+
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Décision {{ log.reference }} | Gouvernance YAAYESS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gov-page { min-height: 100vh; padding: 1.5rem 0 3rem; background: #f8fafc; }
+    .gov-container { width: min(1400px, calc(100% - 2rem)); margin: 0 auto; }
+    .gov-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1.25rem; }
+    .gov-title { margin: 0; color: #0f172a; font-size: 2rem; font-weight: 800; }
+    .gov-subtitle { margin: .35rem 0 0; color: #64748b; }
+    .gov-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+    .gov-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: .6rem .9rem; border-radius: 10px; text-decoration: none; font-weight: 700; }
+    .gov-btn-light { background: #e2e8f0; color: #0f172a; }
+    .gov-btn-primary { background: #0f766e; color: #fff; }
+    .gov-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; }
+    .gov-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 12px 30px rgba(15, 23, 42, .07); overflow: hidden; }
+    .gov-card-header { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: 1rem 1.1rem; border-bottom: 1px solid #e2e8f0; }
+    .gov-card-title { margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; }
+    .gov-card-body { padding: 1rem 1.1rem; }
+    .gov-col-12 { grid-column: span 12; }
+    .gov-col-8 { grid-column: span 8; }
+    .gov-col-6 { grid-column: span 6; }
+    .gov-col-4 { grid-column: span 4; }
+    .gov-score-box { text-align: center; padding: 1.25rem; }
+    .gov-score { font-size: 3.2rem; line-height: 1; font-weight: 900; color: #0f766e; }
+    .gov-score-label { margin-top: .45rem; color: #64748b; }
+    .gov-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+    .gov-meta-item { padding-bottom: .65rem; border-bottom: 1px dashed #e2e8f0; }
+    .gov-meta-label { display: block; color: #64748b; font-size: .74rem; text-transform: uppercase; font-weight: 800; }
+    .gov-meta-value { display: block; margin-top: .2rem; color: #0f172a; font-weight: 700; }
+    .gov-badge { display: inline-flex; padding: .28rem .58rem; border-radius: 999px; font-size: .73rem; font-weight: 800; white-space: nowrap; }
+    .gov-success { color: #166534; background: #dcfce7; }
+    .gov-warning { color: #92400e; background: #fef3c7; }
+    .gov-danger { color: #991b1b; background: #fee2e2; }
+    .gov-info { color: #1e40af; background: #dbeafe; }
+    .gov-muted { color: #334155; background: #e2e8f0; }
+    .gov-criteria { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+    .gov-criterion { border: 1px solid #e2e8f0; border-radius: 12px; padding: .85rem; }
+    .gov-criterion-top { display: flex; justify-content: space-between; gap: .5rem; align-items: center; }
+    .gov-criterion-score { font-size: 1.4rem; font-weight: 900; color: #0f172a; }
+    .gov-message { margin-top: .55rem; color: #475569; font-size: .88rem; }
+    .gov-alert { padding: .85rem 1rem; border-radius: 12px; margin-bottom: .7rem; }
+    .gov-alert-danger { background: #fff1f2; border-left: 4px solid #b91c1c; color: #7f1d1d; }
+    .gov-alert-warning { background: #fffbeb; border-left: 4px solid #d97706; color: #78350f; }
+    .gov-transition { display: grid; grid-template-columns: 1fr auto 1fr; gap: .8rem; align-items: center; }
+    .gov-transition-box { padding: .9rem; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .gov-arrow { font-size: 1.7rem; color: #64748b; }
+    .gov-table-wrap { overflow-x: auto; }
+    .gov-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .gov-table th, .gov-table td { padding: .76rem .7rem; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+    .gov-table th { color: #64748b; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+    .gov-json { white-space: pre-wrap; word-break: break-word; max-height: 500px; overflow: auto; padding: 1rem; background: #0f172a; color: #e2e8f0; border-radius: 12px; font-size: .8rem; }
+    .gov-link { color: #115e59; font-weight: 800; text-decoration: none; }
+    .gov-link:hover { text-decoration: underline; }
+    .gov-empty { padding: 1.5rem; text-align: center; color: #64748b; }
+
+    @media (max-width: 1000px) {
+        .gov-col-8, .gov-col-6, .gov-col-4 { grid-column: span 12; }
+        .gov-criteria { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 650px) {
+        .gov-header { flex-direction: column; }
+        .gov-meta, .gov-criteria, .gov-transition { grid-template-columns: 1fr; }
+        .gov-arrow { transform: rotate(90deg); text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gov-page">
+    <div class="gov-container">
+
+        <header class="gov-header">
+            <div>
+                <h1 class="gov-title">{{ log.reference }}</h1>
+                <p class="gov-subtitle">{{ log.project.title }}</p>
+            </div>
+
+            <div class="gov-actions">
+                <a class="gov-btn gov-btn-light" href="{% url 'governance:decision_log_list' %}">Retour au journal</a>
+                <a class="gov-btn gov-btn-primary" href="{% url 'governance:instance_detail' log.instance.pk %}">Voir le dossier</a>
+            </div>
+        </header>
+
+        <section class="gov-grid">
+
+            <article class="gov-card gov-col-4">
+                <div class="gov-score-box">
+                    <div class="gov-score">{{ log.global_score|floatformat:2 }} %</div>
+                    <div class="gov-score-label">Score global du moteur</div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-8">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Décision</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-meta">
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Décision</span>
+                            <span class="gov-meta-value">{{ log.get_decision_code_display }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Application</span>
+                            <span class="gov-meta-value">{{ log.get_application_status_display }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Éligible</span>
+                            <span class="gov-meta-value">
+                                {% if log.eligible %}
+                                    <span class="gov-badge gov-success">Oui</span>
+                                {% else %}
+                                    <span class="gov-badge gov-danger">Non</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Peut avancer</span>
+                            <span class="gov-meta-value">
+                                {% if log.can_advance %}
+                                    <span class="gov-badge gov-success">Oui</span>
+                                {% else %}
+                                    <span class="gov-badge gov-warning">Non</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Évalué le</span>
+                            <span class="gov-meta-value">{{ log.evaluated_at|date:"d/m/Y H:i:s" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Appliqué le</span>
+                            <span class="gov-meta-value">{{ log.applied_at|date:"d/m/Y H:i:s"|default:"Non appliqué" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Résumé du moteur</h2>
+                </div>
+                <div class="gov-card-body">
+                    {{ log.summary|default:"Aucun résumé disponible." }}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Transition évaluée</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-transition">
+                        <div class="gov-transition-box">
+                            <span class="gov-meta-label">Étape de départ</span>
+                            <strong>{{ log.from_stage.name|default:"Aucune" }}</strong>
+                        </div>
+                        <div class="gov-arrow">→</div>
+                        <div class="gov-transition-box">
+                            <span class="gov-meta-label">Étape d’arrivée</span>
+                            <strong>{{ log.to_stage.name|default:"Aucune transition proposée" }}</strong>
+                        </div>
+                    </div>
+
+                    {% if log.transition %}
+                        <div class="gov-meta-item" style="margin-top:1rem;">
+                            <span class="gov-meta-label">Transition</span>
+                            <span class="gov-meta-value">{{ log.transition.name }} — {{ log.transition.code }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Critères évalués</h2>
+                    <span class="gov-badge gov-muted">{{ criteria_count }} critère(s)</span>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-criteria">
+                        {% for criterion in criteria %}
+                            <div class="gov-criterion">
+                                <div class="gov-criterion-top">
+                                    <strong>{{ criterion.label|default:criterion.code }}</strong>
+                                    {% if criterion.passed %}
+                                        <span class="gov-badge gov-success">Validé</span>
+                                    {% else %}
+                                        <span class="gov-badge gov-danger">Non validé</span>
+                                    {% endif %}
+                                </div>
+                                <div class="gov-criterion-score">{{ criterion.score }} %</div>
+                                <div>Poids : {{ criterion.weight }} %</div>
+                                <div>Score pondéré : {{ criterion.weighted_score }}</div>
+                                <div class="gov-message">{{ criterion.message }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="gov-empty">Aucun critère enregistré.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Blocages</h2>
+                    <span class="gov-badge gov-danger">{{ blocking_reasons_count }}</span>
+                </div>
+                <div class="gov-card-body">
+                    {% for reason in blocking_reasons %}
+                        <div class="gov-alert gov-alert-danger">{{ reason }}</div>
+                    {% empty %}
+                        <div class="gov-empty">Aucun blocage enregistré.</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Avertissements</h2>
+                    <span class="gov-badge gov-warning">{{ warnings_count }}</span>
+                </div>
+                <div class="gov-card-body">
+                    {% for warning in warnings %}
+                        <div class="gov-alert gov-alert-warning">{{ warning }}</div>
+                    {% empty %}
+                        <div class="gov-empty">Aucun avertissement enregistré.</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Tâches liées à l’étape évaluée</h2>
+                </div>
+                <div class="gov-table-wrap">
+                    <table class="gov-table">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Titre</th>
+                                <th>Statut</th>
+                                <th>Priorité</th>
+                                <th>Responsable</th>
+                                <th>Échéance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in related_tasks %}
+                                <tr>
+                                    <td>{{ task.reference }}</td>
+                                    <td>{{ task.title }}</td>
+                                    <td>{{ task.get_status_display }}</td>
+                                    <td>{{ task.get_priority_display }}</td>
+                                    <td>
+                                        {% if task.assigned_to %}
+                                            {{ task.assigned_to }}
+                                        {% elif task.assigned_group %}
+                                            {{ task.assigned_group }}
+                                        {% else %}
+                                            Non affectée
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.due_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="6" class="gov-empty">Aucune tâche liée.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Audit</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-meta">
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Acteur</span>
+                            <span class="gov-meta-value">{{ log.actor|default:"Moteur automatique" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Adresse IP</span>
+                            <span class="gov-meta-value">{{ log.actor_ip_address|default:"Non enregistrée" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">User-Agent</span>
+                            <span class="gov-meta-value">{{ log.actor_user_agent|default:"Non enregistré" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Créé le</span>
+                            <span class="gov-meta-value">{{ log.created_at|date:"d/m/Y H:i:s" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Motif de remplacement</span>
+                            <span class="gov-meta-value">{{ log.override_reason|default:"Aucun" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Message d’échec</span>
+                            <span class="gov-meta-value">{{ log.failure_message|default:"Aucun" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Navigation du journal</h2>
+                </div>
+                <div class="gov-card-body">
+                    {% if previous_log %}
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Décision précédente</span>
+                            <a class="gov-link" href="{% url 'governance:decision_log_detail' previous_log.pk %}">
+                                {{ previous_log.reference }}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if next_log %}
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Décision suivante</span>
+                            <a class="gov-link" href="{% url 'governance:decision_log_detail' next_log.pk %}">
+                                {{ next_log.reference }}
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    {% if not previous_log and not next_log %}
+                        <div class="gov-empty">Aucune autre décision pour ce dossier.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Instantané technique du moteur</h2>
+                </div>
+                <div class="gov-card-body">
+                    <details>
+                        <summary style="cursor:pointer;font-weight:800;">Afficher le snapshot JSON</summary>
+                        <pre class="gov-json">{{ engine_snapshot }}</pre>
+                    </details>
+                </div>
+            </article>
+
+        </section>
+    </div>
+</div>
+{% endblock %}

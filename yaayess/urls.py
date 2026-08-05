@@ -1,7 +1,4 @@
-from django.contrib import admin
 from django.conf import settings
-from django.conf.urls.static import static
-from django.urls import path, include
 
 from accounts.views import landing_view
 from accounts.api.auth_views import MobileLoginView
@@ -54,8 +51,20 @@ urlpatterns = [
         include("pilotage.urls"),
     ),
 
-]
+    path(
+        "community-investment/",
+        include("community_investment.urls"),
+    ),
 
+
+    path(
+        "governance/",
+        include(
+            "governance.urls",
+            namespace="governance",
+        ),
+    ),
+]
 
 # 📁 MEDIA FILES
 if settings.DEBUG:

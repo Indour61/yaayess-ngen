@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}
+Tâches de gouvernance | YAAYESS
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gov-page {
+        min-height: 100vh;
+        padding: 1.5rem 0 3rem;
+        background: #f8fafc;
+    }
+
+    .gov-container {
+        width: min(1500px, calc(100% - 2rem));
+        margin: 0 auto;
+    }
+
+    .gov-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: 2rem;
+        font-weight: 800;
+    }
+
+    .gov-subtitle {
+        margin: .35rem 0 0;
+        color: #64748b;
+    }
+
+    .gov-card {
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .07);
+    }
+
+    .gov-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .gov-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: .6rem .9rem;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .gov-btn-light {
+        color: #0f172a;
+        background: #e2e8f0;
+    }
+
+    .gov-table-wrap {
+        overflow-x: auto;
+    }
+
+    .gov-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
+    }
+
+    .gov-table th,
+    .gov-table td {
+        padding: .8rem .75rem;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .gov-table th {
+        color: #64748b;
+        font-size: .73rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        white-space: nowrap;
+    }
+
+    .gov-link {
+        color: #115e59;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .gov-link:hover {
+        text-decoration: underline;
+    }
+
+    .gov-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: .28rem .58rem;
+        border-radius: 999px;
+        font-size: .73rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .gov-success {
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .gov-warning {
+        color: #92400e;
+        background: #fef3c7;
+    }
+
+    .gov-danger {
+        color: #991b1b;
+        background: #fee2e2;
+    }
+
+    .gov-info {
+        color: #1e40af;
+        background: #dbeafe;
+    }
+
+    .gov-muted {
+        color: #334155;
+        background: #e2e8f0;
+    }
+
+    .gov-empty {
+        padding: 2rem;
+        text-align: center;
+        color: #64748b;
+    }
+
+    @media (max-width: 700px) {
+        .gov-header {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="gov-page">
+
+    <div class="gov-container">
+
+        <header class="gov-header">
+
+            <div>
+                <h1 class="gov-title">
+                    Tâches de gouvernance
+                </h1>
+
+                <p class="gov-subtitle">
+                    Suivi des actions, responsabilités et échéances
+                    du processus de gouvernance.
+                </p>
+            </div>
+
+            <a
+                href="{% url 'governance:dashboard' %}"
+                class="gov-btn gov-btn-light"
+            >
+                Retour au dashboard
+            </a>
+
+        </header>
+
+        <section class="gov-card">
+
+            <div class="gov-card-header">
+
+                <strong>
+                    {{ tasks|length }} tâche(s)
+                </strong>
+
+                {% if perms.governance.view_governancedecisionlog %}
+
+                    <a
+                        class="gov-link"
+                        href="{% url 'governance:decision_log_list' %}"
+                    >
+                        Journal complet
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+            <div class="gov-table-wrap">
+
+                <table class="gov-table">
+
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Tâche</th>
+                            <th>Projet</th>
+                            <th>Étape</th>
+                            <th>Priorité</th>
+                            <th>Statut</th>
+                            <th>Responsable</th>
+                            <th>Échéance</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for task in tasks %}
+
+                            <tr>
+
+                                <td>
+                                    <a
+                                        class="gov-link"
+                                        href="{% url 'admin:governance_governancetask_change' task.pk %}"
+                                    >
+                                        {{ task.reference }}
+                                    </a>
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        {{ task.title }}
+                                    </strong>
+
+                                    {% if task.description %}
+                                        <div>
+                                            {{ task.description|truncatechars:90 }}
+                                        </div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ task.instance.project.title }}
+
+                                    <div>
+                                        {{ task.instance.reference }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {{ task.stage.name }}
+                                </td>
+
+                                <td>
+
+                                    {% if task.priority == "CRITICAL" %}
+
+                                        <span class="gov-badge gov-danger">
+                                            {{ task.get_priority_display }}
+                                        </span>
+
+                                    {% elif task.priority == "URGENT" %}
+
+                                        <span class="gov-badge gov-warning">
+                                            {{ task.get_priority_display }}
+                                        </span>
+
+                                    {% elif task.priority == "HIGH" %}
+
+                                        <span class="gov-badge gov-info">
+                                            {{ task.get_priority_display }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="gov-badge gov-muted">
+                                            {{ task.get_priority_display }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    {% if task.status == "COMPLETED" %}
+
+                                        <span class="gov-badge gov-success">
+                                            {{ task.get_status_display }}
+                                        </span>
+
+                                    {% elif task.status == "CANCELLED" %}
+
+                                        <span class="gov-badge gov-danger">
+                                            {{ task.get_status_display }}
+                                        </span>
+
+                                    {% elif task.status == "WAITING" %}
+
+                                        <span class="gov-badge gov-warning">
+                                            {{ task.get_status_display }}
+                                        </span>
+
+                                    {% elif task.status == "IN_PROGRESS" %}
+
+                                        <span class="gov-badge gov-info">
+                                            {{ task.get_status_display }}
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="gov-badge gov-muted">
+                                            {{ task.get_status_display }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+                                    {% if task.assigned_to %}
+                                        {{ task.assigned_to }}
+                                    {% elif task.assigned_group %}
+                                        {{ task.assigned_group }}
+                                    {% else %}
+                                        Non affectée
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ task.due_at|date:"d/m/Y H:i"|default:"—" }}
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+                                <td colspan="8" class="gov-empty">
+                                    Aucune tâche de gouvernance disponible.
+                                </td>
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+{% endblock %}

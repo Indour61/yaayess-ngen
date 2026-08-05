@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}Dossier {{ instance.reference }} | Gouvernance YAAYESS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gov-page { min-height: 100vh; padding: 1.5rem 0 3rem; background: #f8fafc; }
+    .gov-container { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; }
+    .gov-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1.25rem; }
+    .gov-title { margin: 0; color: #0f172a; font-size: 2rem; font-weight: 800; }
+    .gov-subtitle { margin: .35rem 0 0; color: #64748b; }
+    .gov-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+    .gov-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: .6rem .9rem; border-radius: 10px; text-decoration: none; font-weight: 700; }
+    .gov-btn-light { background: #e2e8f0; color: #0f172a; }
+    .gov-btn-primary { background: #0f766e; color: #fff; }
+    .gov-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 1rem; }
+    .gov-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 12px 30px rgba(15, 23, 42, .07); overflow: hidden; }
+    .gov-card-header { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: 1rem 1.1rem; border-bottom: 1px solid #e2e8f0; }
+    .gov-card-title { margin: 0; font-size: 1rem; font-weight: 800; color: #0f172a; }
+    .gov-card-body { padding: 1rem 1.1rem; }
+    .gov-col-12 { grid-column: span 12; }
+    .gov-col-8 { grid-column: span 8; }
+    .gov-col-6 { grid-column: span 6; }
+    .gov-col-4 { grid-column: span 4; }
+    .gov-kpis { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: .8rem; }
+    .gov-kpi { padding: .9rem; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .gov-kpi-label { color: #64748b; font-size: .76rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .gov-kpi-value { margin-top: .3rem; color: #0f172a; font-size: 1.7rem; font-weight: 900; }
+    .gov-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; }
+    .gov-meta-item { padding-bottom: .65rem; border-bottom: 1px dashed #e2e8f0; }
+    .gov-meta-label { display: block; color: #64748b; font-size: .74rem; text-transform: uppercase; font-weight: 800; }
+    .gov-meta-value { display: block; margin-top: .2rem; color: #0f172a; font-weight: 700; }
+    .gov-badge { display: inline-flex; padding: .28rem .58rem; border-radius: 999px; font-size: .73rem; font-weight: 800; white-space: nowrap; }
+    .gov-success { color: #166534; background: #dcfce7; }
+    .gov-warning { color: #92400e; background: #fef3c7; }
+    .gov-danger { color: #991b1b; background: #fee2e2; }
+    .gov-info { color: #1e40af; background: #dbeafe; }
+    .gov-muted { color: #334155; background: #e2e8f0; }
+    .gov-table-wrap { overflow-x: auto; }
+    .gov-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .gov-table th, .gov-table td { padding: .76rem .7rem; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+    .gov-table th { color: #64748b; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+    .gov-link { color: #115e59; font-weight: 800; text-decoration: none; }
+    .gov-link:hover { text-decoration: underline; }
+    .gov-timeline { display: grid; gap: .7rem; }
+    .gov-step { display: grid; grid-template-columns: 42px 1fr auto; gap: .75rem; align-items: center; padding: .7rem; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .gov-step-index { width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; background: #e2e8f0; color: #334155; font-weight: 800; }
+    .gov-step-current { border-color: #0f766e; background: #f0fdfa; }
+    .gov-step-current .gov-step-index { background: #0f766e; color: #fff; }
+    .gov-empty { padding: 1.5rem; text-align: center; color: #64748b; }
+
+    @media (max-width: 1000px) {
+        .gov-col-8, .gov-col-6, .gov-col-4 { grid-column: span 12; }
+        .gov-kpis { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 650px) {
+        .gov-header { flex-direction: column; }
+        .gov-kpis, .gov-meta { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gov-page">
+    <div class="gov-container">
+
+        <header class="gov-header">
+            <div>
+                <h1 class="gov-title">{{ instance.reference }}</h1>
+                <p class="gov-subtitle">{{ instance.project.title }}</p>
+            </div>
+
+            <div class="gov-actions">
+                <a class="gov-btn gov-btn-light" href="{% url 'governance:instance_list' %}">Retour aux dossiers</a>
+                {% if perms.governance.view_governancedecisionlog %}
+                    <a class="gov-btn gov-btn-primary" href="{% url 'governance:decision_log_list' %}?q={{ instance.reference|urlencode }}">Voir le journal</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <section class="gov-grid">
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-body">
+                    <div class="gov-kpis">
+                        <div class="gov-kpi">
+                            <div class="gov-kpi-label">Score de gouvernance</div>
+                            <div class="gov-kpi-value">{{ instance.governance_score|floatformat:2 }} %</div>
+                        </div>
+                        <div class="gov-kpi">
+                            <div class="gov-kpi-label">Statut</div>
+                            <div class="gov-kpi-value" style="font-size:1rem;">
+                                {% if instance.status == "ACTIVE" %}
+                                    <span class="gov-badge gov-info">{{ instance.get_status_display }}</span>
+                                {% elif instance.status == "WAITING" %}
+                                    <span class="gov-badge gov-warning">{{ instance.get_status_display }}</span>
+                                {% elif instance.status == "COMPLETED" or instance.status == "APPROVED" %}
+                                    <span class="gov-badge gov-success">{{ instance.get_status_display }}</span>
+                                {% elif instance.status == "REJECTED" or instance.status == "SUSPENDED" %}
+                                    <span class="gov-badge gov-danger">{{ instance.get_status_display }}</span>
+                                {% else %}
+                                    <span class="gov-badge gov-muted">{{ instance.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="gov-kpi">
+                            <div class="gov-kpi-label">Tâches ouvertes</div>
+                            <div class="gov-kpi-value">{{ open_tasks_count }}</div>
+                        </div>
+                        <div class="gov-kpi">
+                            <div class="gov-kpi-label">Décisions enregistrées</div>
+                            <div class="gov-kpi-value">{{ decision_logs_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Informations du dossier</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-meta">
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Projet</span>
+                            <span class="gov-meta-value">{{ instance.project.title }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Référence projet</span>
+                            <span class="gov-meta-value">{{ instance.project.reference }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Workflow</span>
+                            <span class="gov-meta-value">{{ instance.workflow.name }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Version</span>
+                            <span class="gov-meta-value">{{ instance.workflow.version }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Étape actuelle</span>
+                            <span class="gov-meta-value">{{ instance.current_stage.name|default:"Aucune étape" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Étape précédente</span>
+                            <span class="gov-meta-value">{{ instance.previous_stage.name|default:"Aucune" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Échéance</span>
+                            <span class="gov-meta-value">{{ instance.due_at|date:"d/m/Y H:i"|default:"—" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Dernière action</span>
+                            <span class="gov-meta-value">{{ instance.last_action_at|date:"d/m/Y H:i"|default:"—" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-6">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Projet et implantation</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-meta">
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Groupement</span>
+                            <span class="gov-meta-value">{{ instance.project.group|default:"Non renseigné" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Bureau de poste</span>
+                            <span class="gov-meta-value">{{ instance.project.postal_office|default:"Non renseigné" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Région postale</span>
+                            <span class="gov-meta-value">{{ instance.project.postal_office.region|default:"Non renseignée" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Politique d’éligibilité</span>
+                            <span class="gov-meta-value">{{ instance.project.eligibility_policy|default:"Non définie" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Démarré par</span>
+                            <span class="gov-meta-value">{{ instance.started_by|default:"Moteur automatique" }}</span>
+                        </div>
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">Dernier acteur</span>
+                            <span class="gov-meta-value">{{ instance.last_action_by|default:"—" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-8">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Cycle de gouvernance</h2>
+                </div>
+                <div class="gov-card-body">
+                    <div class="gov-timeline">
+                        {% for stage in workflow_stages %}
+                            <div class="gov-step {% if instance.current_stage_id == stage.id %}gov-step-current{% endif %}">
+                                <div class="gov-step-index">{{ stage.order }}</div>
+                                <div>
+                                    <strong>{{ stage.name }}</strong>
+                                    <div>{{ stage.responsible_group|default:"Responsable non défini" }}</div>
+                                </div>
+                                <div>
+                                    {% if instance.current_stage_id == stage.id %}
+                                        <span class="gov-badge gov-info">Étape actuelle</span>
+                                    {% elif instance.previous_stage_id == stage.id %}
+                                        <span class="gov-badge gov-success">Étape précédente</span>
+                                    {% elif stage.is_final %}
+                                        <span class="gov-badge gov-muted">Étape finale</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="gov-empty">Aucune étape configurée pour ce workflow.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-4">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Transitions disponibles</h2>
+                </div>
+                <div class="gov-card-body">
+                    {% for transition in available_transitions %}
+                        <div class="gov-meta-item">
+                            <span class="gov-meta-label">{{ transition.code }}</span>
+                            <span class="gov-meta-value">{{ transition.name }}</span>
+                            <small>{{ transition.from_stage.name }} → {{ transition.to_stage.name }}</small>
+                        </div>
+                    {% empty %}
+                        <div class="gov-empty">Aucune transition disponible depuis l’étape actuelle.</div>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Tâches du dossier</h2>
+                    <span class="gov-badge gov-muted">{{ tasks|length }} tâche(s)</span>
+                </div>
+                <div class="gov-table-wrap">
+                    <table class="gov-table">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Titre</th>
+                                <th>Étape</th>
+                                <th>Priorité</th>
+                                <th>Statut</th>
+                                <th>Responsable</th>
+                                <th>Échéance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                                <tr>
+                                    <td>{{ task.reference }}</td>
+                                    <td>{{ task.title }}</td>
+                                    <td>{{ task.stage.name }}</td>
+                                    <td>{{ task.get_priority_display }}</td>
+                                    <td>{{ task.get_status_display }}</td>
+                                    <td>
+                                        {% if task.assigned_to %}
+                                            {{ task.assigned_to }}
+                                        {% elif task.assigned_group %}
+                                            {{ task.assigned_group }}
+                                        {% else %}
+                                            Non affectée
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.due_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="7" class="gov-empty">Aucune tâche enregistrée.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="gov-card gov-col-12">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Historique des décisions</h2>
+                    {% if latest_decision %}
+                        <span class="gov-badge gov-warning">{{ latest_decision.get_decision_code_display }}</span>
+                    {% endif %}
+                </div>
+                <div class="gov-table-wrap">
+                    <table class="gov-table">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Date</th>
+                                <th>Décision</th>
+                                <th>Application</th>
+                                <th>Étape</th>
+                                <th>Score</th>
+                                <th>Acteur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in decision_logs %}
+                                <tr>
+                                    <td>
+                                        <a class="gov-link" href="{% url 'governance:decision_log_detail' log.pk %}">
+                                            {{ log.reference }}
+                                        </a>
+                                    </td>
+                                    <td>{{ log.evaluated_at|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ log.get_decision_code_display }}</td>
+                                    <td>{{ log.get_application_status_display }}</td>
+                                    <td>{{ log.from_stage.name|default:"—" }}</td>
+                                    <td>{{ log.global_score|floatformat:2 }} %</td>
+                                    <td>{{ log.actor|default:"Moteur automatique" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="7" class="gov-empty">Aucune décision enregistrée.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -119,6 +119,8 @@ INSTALLED_APPS = [
     # Apps locales
     'cotisationtontine.apps.CotisationtontineConfig',
     'pilotage',
+    'community_investment.apps.CommunityInvestmentConfig',
+    'governance.apps.GovernanceConfig',
 
     'epargnecredit',
     'legal',

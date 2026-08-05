@@ -1,0 +1,739 @@
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Dashboard Gouvernance | YAAYESS{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --gov-primary: #0f766e;
+        --gov-primary-dark: #115e59;
+        --gov-secondary: #0f172a;
+        --gov-success: #15803d;
+        --gov-warning: #d97706;
+        --gov-danger: #b91c1c;
+        --gov-info: #1d4ed8;
+        --gov-muted: #64748b;
+        --gov-border: #e2e8f0;
+        --gov-surface: #ffffff;
+        --gov-bg: #f8fafc;
+        --gov-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    .gov-page {
+        background: var(--gov-bg);
+        min-height: 100vh;
+        padding: 1.5rem 0 3rem;
+    }
+
+    .gov-container {
+        width: min(1600px, calc(100% - 2rem));
+        margin: 0 auto;
+    }
+
+    .gov-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-title {
+        margin: 0;
+        color: var(--gov-secondary);
+        font-size: clamp(1.6rem, 3vw, 2.35rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+    }
+
+    .gov-subtitle {
+        color: var(--gov-muted);
+        margin: .35rem 0 0;
+    }
+
+    .gov-generated {
+        color: var(--gov-muted);
+        font-size: .86rem;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .gov-filter-card,
+    .gov-card {
+        background: var(--gov-surface);
+        border: 1px solid var(--gov-border);
+        border-radius: 16px;
+        box-shadow: var(--gov-shadow);
+    }
+
+    .gov-filter-card {
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(160px, 1fr));
+        gap: .85rem;
+        align-items: end;
+    }
+
+    .gov-field label {
+        display: block;
+        font-size: .78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--gov-muted);
+        margin-bottom: .35rem;
+    }
+
+    .gov-field select,
+    .gov-field input {
+        width: 100%;
+        min-height: 42px;
+        border: 1px solid var(--gov-border);
+        border-radius: 10px;
+        background: #fff;
+        padding: .55rem .7rem;
+        color: var(--gov-secondary);
+    }
+
+    .gov-actions {
+        display: flex;
+        gap: .55rem;
+    }
+
+    .gov-btn {
+        border: 0;
+        border-radius: 10px;
+        min-height: 42px;
+        padding: .6rem .9rem;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gov-btn-primary {
+        background: var(--gov-primary);
+        color: #fff;
+    }
+
+    .gov-btn-primary:hover {
+        background: var(--gov-primary-dark);
+        color: #fff;
+    }
+
+    .gov-btn-light {
+        background: #eef2f7;
+        color: var(--gov-secondary);
+    }
+
+    .gov-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .gov-kpi {
+        padding: 1rem 1.1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .gov-kpi::after {
+        content: "";
+        position: absolute;
+        inset: auto -28px -38px auto;
+        width: 95px;
+        height: 95px;
+        border-radius: 999px;
+        background: rgba(15, 118, 110, .08);
+    }
+
+    .gov-kpi-label {
+        font-size: .8rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--gov-muted);
+    }
+
+    .gov-kpi-value {
+        margin-top: .35rem;
+        font-size: 2rem;
+        line-height: 1;
+        font-weight: 900;
+        color: var(--gov-secondary);
+    }
+
+    .gov-kpi-note {
+        margin-top: .45rem;
+        font-size: .83rem;
+        color: var(--gov-muted);
+    }
+
+    .gov-layout {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .gov-card-header {
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid var(--gov-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .gov-card-title {
+        margin: 0;
+        color: var(--gov-secondary);
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .gov-card-body {
+        padding: 1rem 1.1rem;
+    }
+
+    .gov-table-wrap {
+        overflow-x: auto;
+    }
+
+    .gov-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
+    }
+
+    .gov-table th,
+    .gov-table td {
+        padding: .75rem .65rem;
+        text-align: left;
+        border-bottom: 1px solid var(--gov-border);
+        vertical-align: middle;
+    }
+
+    .gov-table th {
+        color: var(--gov-muted);
+        font-size: .73rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        white-space: nowrap;
+    }
+
+    .gov-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .gov-link {
+        color: var(--gov-primary-dark);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .gov-link:hover {
+        text-decoration: underline;
+    }
+
+    .gov-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .26rem .55rem;
+        border-radius: 999px;
+        font-size: .74rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .gov-badge-success { background: #dcfce7; color: #166534; }
+    .gov-badge-warning { background: #fef3c7; color: #92400e; }
+    .gov-badge-danger { background: #fee2e2; color: #991b1b; }
+    .gov-badge-info { background: #dbeafe; color: #1e40af; }
+    .gov-badge-muted { background: #e2e8f0; color: #334155; }
+
+    .gov-progress {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .gov-progress-bar {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--gov-primary);
+    }
+
+    .gov-stage-list {
+        display: grid;
+        gap: .7rem;
+    }
+
+    .gov-stage-item {
+        border: 1px solid var(--gov-border);
+        border-radius: 12px;
+        padding: .8rem;
+    }
+
+    .gov-stage-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        margin-bottom: .5rem;
+    }
+
+    .gov-stage-name {
+        font-weight: 800;
+        color: var(--gov-secondary);
+    }
+
+    .gov-stage-meta {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: .5rem;
+        color: var(--gov-muted);
+        font-size: .78rem;
+    }
+
+    .gov-alert {
+        border-left: 4px solid var(--gov-warning);
+        background: #fffbeb;
+        border-radius: 10px;
+        padding: .75rem .85rem;
+        margin-bottom: .7rem;
+    }
+
+    .gov-alert-danger {
+        border-left-color: var(--gov-danger);
+        background: #fff1f2;
+    }
+
+    .gov-empty {
+        padding: 1.8rem 1rem;
+        text-align: center;
+        color: var(--gov-muted);
+    }
+
+    .gov-section-gap {
+        margin-top: 1rem;
+    }
+
+    @media (max-width: 1200px) {
+        .gov-filter-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+
+        .gov-kpi-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+
+        .gov-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .gov-header {
+            flex-direction: column;
+        }
+
+        .gov-generated {
+            text-align: left;
+            white-space: normal;
+        }
+
+        .gov-filter-grid,
+        .gov-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .gov-stage-meta {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gov-page">
+    <div class="gov-container">
+
+        <header class="gov-header">
+            <div>
+                <h1 class="gov-title">Dashboard Gouvernance</h1>
+                <p class="gov-subtitle">
+                    Pilotage institutionnel des investissements communautaires.
+                </p>
+            </div>
+            <div class="gov-generated">
+                Actualisé le {{ dashboard_generated_at|date:"d/m/Y à H:i" }}
+            </div>
+        </header>
+
+        <section class="gov-filter-card">
+            <form method="get" class="gov-filter-grid">
+                <div class="gov-field">
+                    <label for="workflow">Workflow</label>
+                    <input
+                        id="workflow"
+                        name="workflow"
+                        value="{{ selected_workflow_id|default:'' }}"
+                        placeholder="ID du workflow"
+                    >
+                </div>
+
+                <div class="gov-field">
+                    <label for="region">Région postale</label>
+                    <input
+                        id="region"
+                        name="region"
+                        value="{{ selected_region_id|default:'' }}"
+                        placeholder="ID de la région"
+                    >
+                </div>
+
+                <div class="gov-field">
+                    <label for="postal_office">Bureau de poste</label>
+                    <input
+                        id="postal_office"
+                        name="postal_office"
+                        value="{{ selected_postal_office_id|default:'' }}"
+                        placeholder="ID du bureau"
+                    >
+                </div>
+
+                <div class="gov-field">
+                    <label for="status">Statut du dossier</label>
+                    <select id="status" name="status">
+                        <option value="">Tous les statuts</option>
+                        <option value="NOT_STARTED" {% if selected_status == "NOT_STARTED" %}selected{% endif %}>Non démarré</option>
+                        <option value="ACTIVE" {% if selected_status == "ACTIVE" %}selected{% endif %}>Actif</option>
+                        <option value="WAITING" {% if selected_status == "WAITING" %}selected{% endif %}>En attente</option>
+                        <option value="SUSPENDED" {% if selected_status == "SUSPENDED" %}selected{% endif %}>Suspendu</option>
+                        <option value="APPROVED" {% if selected_status == "APPROVED" %}selected{% endif %}>Approuvé</option>
+                        <option value="REJECTED" {% if selected_status == "REJECTED" %}selected{% endif %}>Rejeté</option>
+                        <option value="COMPLETED" {% if selected_status == "COMPLETED" %}selected{% endif %}>Terminé</option>
+                        <option value="CANCELLED" {% if selected_status == "CANCELLED" %}selected{% endif %}>Annulé</option>
+                    </select>
+                </div>
+
+                <div class="gov-actions">
+                    <button class="gov-btn gov-btn-primary" type="submit">Filtrer</button>
+                    <a class="gov-btn gov-btn-light" href="{% url 'governance:dashboard' %}">Réinitialiser</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="gov-kpi-grid">
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Dossiers de gouvernance</div>
+                <div class="gov-kpi-value">{{ total_instances }}</div>
+                <div class="gov-kpi-note">{{ active_instances }} actif(s), {{ waiting_instances }} en attente</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Score moyen</div>
+                <div class="gov-kpi-value">{{ average_score|floatformat:2 }} %</div>
+                <div class="gov-kpi-note">Moyenne des dossiers filtrés</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Tâches ouvertes</div>
+                <div class="gov-kpi-value">{{ open_tasks }}</div>
+                <div class="gov-kpi-note">{{ overdue_tasks }} en retard, {{ urgent_tasks }} urgente(s)</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Décisions enregistrées</div>
+                <div class="gov-kpi-value">{{ total_decisions }}</div>
+                <div class="gov-kpi-note">{{ applied_decisions }} appliquée(s)</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Dossiers terminés</div>
+                <div class="gov-kpi-value">{{ completed_instances }}</div>
+                <div class="gov-kpi-note">Taux : {{ completion_rate|floatformat:2 }} %</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Dossiers en retard</div>
+                <div class="gov-kpi-value">{{ overdue_instances }}</div>
+                <div class="gov-kpi-note">{{ suspended_instances }} suspendu(s)</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Compléments demandés</div>
+                <div class="gov-kpi-value">{{ information_requests }}</div>
+                <div class="gov-kpi-note">{{ blocked_decisions }} blocage(s) ou rejet(s)</div>
+            </article>
+
+            <article class="gov-card gov-kpi">
+                <div class="gov-kpi-label">Taux d'application</div>
+                <div class="gov-kpi-value">{{ applied_decision_rate|floatformat:2 }} %</div>
+                <div class="gov-kpi-note">{{ manual_reviews }} revue(s) humaine(s)</div>
+            </article>
+        </section>
+
+        <section class="gov-layout">
+            <article class="gov-card">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Pipeline de gouvernance</h2>
+                    <span class="gov-badge gov-badge-info">{{ total_instances }} dossier(s)</span>
+                </div>
+                <div class="gov-card-body">
+                    {% if stage_pipeline %}
+                        <div class="gov-stage-list">
+                            {% for stage in stage_pipeline %}
+                                <div class="gov-stage-item">
+                                    <div class="gov-stage-top">
+                                        <div>
+                                            <div class="gov-stage-name">
+                                                {{ stage.order }}. {{ stage.name }}
+                                            </div>
+                                            <small>{{ stage.workflow.name }}</small>
+                                        </div>
+                                        <span class="gov-badge gov-badge-info">
+                                            {{ stage.instance_total }} dossier(s)
+                                        </span>
+                                    </div>
+
+                                    <div class="gov-progress" aria-label="Dossiers à cette étape">
+                                        <div
+                                            class="gov-progress-bar"
+                                            style="width:{% widthratio stage.instance_total total_instances 100 %}%"
+                                        ></div>
+                                    </div>
+
+                                    <div class="gov-stage-meta">
+                                        <span>Actifs : <strong>{{ stage.active_total }}</strong></span>
+                                        <span>En attente : <strong>{{ stage.waiting_total }}</strong></span>
+                                        <span>En retard : <strong>{{ stage.overdue_total }}</strong></span>
+                                        <span>
+                                            Responsable :
+                                            <strong>{{ stage.responsible_group|default:"Non défini" }}</strong>
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="gov-empty">Aucune étape active trouvée.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="gov-card">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Alertes prioritaires</h2>
+                    <span class="gov-badge gov-badge-warning">À traiter</span>
+                </div>
+                <div class="gov-card-body">
+                    {% if attention_instances %}
+                        {% for instance in attention_instances %}
+                            <div class="gov-alert {% if instance.is_overdue %}gov-alert-danger{% endif %}">
+                                <a
+                                    class="gov-link"
+                                    href="{% url 'admin:governance_governanceinstance_change' instance.pk %}"
+                                >
+                                    {{ instance.reference }}
+                                </a>
+                                <div>{{ instance.project.title }}</div>
+                                <small>
+                                    {{ instance.get_status_display }}
+                                    · {{ instance.current_stage|default:"Aucune étape" }}
+                                    {% if instance.due_at %}
+                                        · Échéance {{ instance.due_at|date:"d/m/Y H:i" }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="gov-empty">Aucun dossier critique ou en retard.</div>
+                    {% endif %}
+                </div>
+            </article>
+        </section>
+
+        <section class="gov-layout">
+            <article class="gov-card">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Tâches prioritaires</h2>
+                    <span class="gov-badge gov-badge-danger">{{ overdue_tasks }} en retard</span>
+                </div>
+                <div class="gov-table-wrap">
+                    <table class="gov-table">
+                        <thead>
+                            <tr>
+                                <th>Tâche</th>
+                                <th>Projet</th>
+                                <th>Priorité</th>
+                                <th>Statut</th>
+                                <th>Échéance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in priority_tasks %}
+                                <tr>
+                                    <td>
+                                        <a
+                                            class="gov-link"
+                                            href="{% url 'admin:governance_governancetask_change' task.pk %}"
+                                        >
+                                            {{ task.reference }}
+                                        </a>
+                                        <div>{{ task.title }}</div>
+                                    </td>
+                                    <td>{{ task.instance.project.title }}</td>
+                                    <td>
+                                        {% if task.priority == "CRITICAL" or task.priority == "URGENT" %}
+                                            <span class="gov-badge gov-badge-danger">{{ task.get_priority_display }}</span>
+                                        {% else %}
+                                            <span class="gov-badge gov-badge-warning">{{ task.get_priority_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ task.get_status_display }}</td>
+                                    <td>{{ task.due_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="gov-empty">Aucune tâche prioritaire.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="gov-card">
+                <div class="gov-card-header">
+                    <h2 class="gov-card-title">Derniers dossiers</h2>
+                    <span class="gov-badge gov-badge-muted">{{ total_instances }}</span>
+                </div>
+                <div class="gov-table-wrap">
+                    <table class="gov-table">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Étape</th>
+                                <th>Statut</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for instance in recent_instances %}
+                                <tr>
+                                    <td>
+                                        <a
+                                            class="gov-link"
+                                            href="{% url 'admin:governance_governanceinstance_change' instance.pk %}"
+                                        >
+                                            {{ instance.reference }}
+                                        </a>
+                                        <div>{{ instance.project.title }}</div>
+                                    </td>
+                                    <td>{{ instance.current_stage.name|default:"—" }}</td>
+                                    <td>
+                                        {% if instance.status == "ACTIVE" %}
+                                            <span class="gov-badge gov-badge-info">{{ instance.get_status_display }}</span>
+                                        {% elif instance.status == "WAITING" %}
+                                            <span class="gov-badge gov-badge-warning">{{ instance.get_status_display }}</span>
+                                        {% elif instance.status == "COMPLETED" or instance.status == "APPROVED" %}
+                                            <span class="gov-badge gov-badge-success">{{ instance.get_status_display }}</span>
+                                        {% elif instance.status == "REJECTED" or instance.status == "SUSPENDED" %}
+                                            <span class="gov-badge gov-badge-danger">{{ instance.get_status_display }}</span>
+                                        {% else %}
+                                            <span class="gov-badge gov-badge-muted">{{ instance.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ instance.governance_score|floatformat:2 }} %</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="gov-empty">Aucune instance trouvée.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <section class="gov-card gov-section-gap">
+            <div class="gov-card-header">
+                <h2 class="gov-card-title">Dernières décisions du moteur</h2>
+                <a
+                    class="gov-link"
+                    href="{% url 'admin:governance_governancedecisionlog_changelist' %}"
+                >
+                    Voir le journal complet
+                </a>
+            </div>
+            <div class="gov-table-wrap">
+                <table class="gov-table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Projet</th>
+                            <th>Décision</th>
+                            <th>Application</th>
+                            <th>Étape de départ</th>
+                            <th>Score</th>
+                            <th>Acteur</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for decision in recent_decisions %}
+                            <tr>
+                                <td>
+                                    <a
+                                        class="gov-link"
+                                        href="{% url 'admin:governance_governancedecisionlog_change' decision.pk %}"
+                                    >
+                                        {{ decision.reference }}
+                                    </a>
+                                </td>
+                                <td>{{ decision.project.title }}</td>
+                                <td>
+                                    {% if decision.decision_code == "ADVANCE" or decision.decision_code == "APPROVE" %}
+                                        <span class="gov-badge gov-badge-success">{{ decision.get_decision_code_display }}</span>
+                                    {% elif decision.decision_code == "REQUEST_INFO" or decision.decision_code == "MANUAL_REVIEW" %}
+                                        <span class="gov-badge gov-badge-warning">{{ decision.get_decision_code_display }}</span>
+                                    {% elif decision.decision_code == "BLOCK" or decision.decision_code == "REJECT" %}
+                                        <span class="gov-badge gov-badge-danger">{{ decision.get_decision_code_display }}</span>
+                                    {% else %}
+                                        <span class="gov-badge gov-badge-muted">{{ decision.get_decision_code_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ decision.get_application_status_display }}</td>
+                                <td>{{ decision.from_stage.name|default:"—" }}</td>
+                                <td>{{ decision.global_score|floatformat:2 }} %</td>
+                                <td>{{ decision.actor|default:"Moteur automatique" }}</td>
+                                <td>{{ decision.evaluated_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="8" class="gov-empty">Aucune décision enregistrée.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}
