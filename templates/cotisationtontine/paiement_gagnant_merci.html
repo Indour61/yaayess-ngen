@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load humanize %}
 
 {% block title %}Merci pour votre paiement{% endblock %}
@@ -7,71 +7,232 @@
 
 <div class="container py-5">
 
-  <div class="row justify-content-center">
+    <div class="row justify-content-center">
 
-    <div class="col-lg-6 col-md-8 col-sm-12">
+        <div class="col-xl-6 col-lg-7 col-md-9 col-sm-12">
 
-      <div class="card shadow-lg border-0 text-center">
+            {% if messages %}
+                {% for message in messages %}
+                    <div
+                        class="alert alert-{{ message.tags|default:'info' }}
+                               alert-dismissible fade show"
+                        role="alert"
+                    >
+                        {{ message }}
 
-        <div class="card-body p-5">
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Fermer"
+                        ></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-          <!-- Icône -->
-          <div style="font-size:70px;">✅</div>
+            <div class="card shadow-lg border-0 rounded-4 text-center">
 
-          <h2 class="text-success fw-bold mt-3 mb-3">
-            Paiement confirmé
-          </h2>
+                <div class="card-body p-4 p-md-5">
 
-          {% if group and gagnant and montant %}
+                    <div class="success-icon mb-3" aria-hidden="true">
+                        ✅
+                    </div>
 
-            <p class="fs-5 text-muted mb-4">
-              Le paiement a été effectué avec succès.
-            </p>
+                    <h2 class="text-success fw-bold mb-3">
+                        Paiement confirmé
+                    </h2>
 
-            <div class="bg-light rounded p-3 mb-4">
+                    <p class="fs-5 text-muted mb-4">
+                        Votre paiement a été effectué avec succès
+                        et enregistré dans YAAYESS.
+                    </p>
 
-              <div class="mb-2">
-                💰 <strong>Montant :</strong>
-                <span class="text-primary fw-bold">
-                  {{ montant|intcomma }} FCFA
-                </span>
-              </div>
+                    {% if group or gagnant or montant %}
 
-              <div class="mb-2">
-                🎯 <strong>Gagnant :</strong>
-                {{ gagnant.user.nom }}
-              </div>
+                        <div class="bg-light rounded-3 p-4 mb-4 text-start">
 
-              <div>
-                👥 <strong>Groupe :</strong>
-                {{ group.nom }}
-              </div>
+                            {% if montant %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3"
+                                >
+                                    <span class="text-muted">
+                                        💰 Montant
+                                    </span>
+
+                                    <strong class="text-primary text-end">
+                                        {{ montant|floatformat:0|intcomma }}
+                                        FCFA
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            {% if frais %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3"
+                                >
+                                    <span class="text-muted">
+                                        Frais YAAYESS
+                                    </span>
+
+                                    <strong class="text-end">
+                                        {{ frais|floatformat:0|intcomma }}
+                                        FCFA
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            {% if total %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3
+                                           pt-3 border-top"
+                                >
+                                    <span class="fw-bold">
+                                        Total payé
+                                    </span>
+
+                                    <strong class="text-success fs-5 text-end">
+                                        {{ total|floatformat:0|intcomma }}
+                                        FCFA
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            {% if gagnant %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3"
+                                >
+                                    <span class="text-muted">
+                                        🎯 Gagnant
+                                    </span>
+
+                                    <strong class="text-end">
+                                        {{ gagnant.user.nom|default:gagnant.user.phone }}
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            {% if group %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3"
+                                >
+                                    <span class="text-muted">
+                                        👥 Groupe
+                                    </span>
+
+                                    <strong class="text-end">
+                                        {{ group.nom }}
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                            {% if transaction_id %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3 mb-3"
+                                >
+                                    <span class="text-muted">
+                                        Référence
+                                    </span>
+
+                                    <code class="text-end">
+                                        {{ transaction_id }}
+                                    </code>
+                                </div>
+                            {% endif %}
+
+                            {% if date_paiement %}
+                                <div
+                                    class="d-flex justify-content-between
+                                           align-items-center gap-3"
+                                >
+                                    <span class="text-muted">
+                                        Date
+                                    </span>
+
+                                    <strong class="text-end">
+                                        {{ date_paiement|date:"d/m/Y H:i" }}
+                                    </strong>
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+                    {% if receipt_url %}
+                        <a
+                            href="{{ receipt_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn btn-outline-success btn-lg mb-3"
+                        >
+                            🧾 Consulter le reçu PayDunya
+                        </a>
+                    {% elif versement.paydunya_receipt_url %}
+                        <a
+                            href="{{ versement.paydunya_receipt_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn btn-outline-success btn-lg mb-3"
+                        >
+                            🧾 Consulter le reçu PayDunya
+                        </a>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+
+                        {% if group %}
+                            <a
+                                href="{% url 'cotisationtontine:group_detail' group.id %}"
+                                class="btn btn-outline-secondary btn-lg"
+                            >
+                                ← Retour au groupe
+                            </a>
+                        {% endif %}
+
+                        <a
+                            href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
+                            class="btn btn-success btn-lg"
+                        >
+                            📊 Retour au tableau de bord
+                        </a>
+
+                    </div>
+
+                </div>
 
             </div>
 
-          {% else %}
-
-            <p class="fs-5 text-muted">
-              Votre paiement a bien été pris en compte.
+            <p class="text-center text-muted mt-4 small mb-0">
+                © {% now "Y" %} YaayESS
             </p>
-
-          {% endif %}
-
-          <a href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
-             class="btn btn-success btn-lg mt-3 px-4">
-
-            📊 Retour au tableau de bord
-
-          </a>
 
         </div>
 
-      </div>
-
     </div>
 
-  </div>
-
 </div>
+
+<style>
+.success-icon {
+    font-size: 4.5rem;
+    line-height: 1;
+}
+
+code {
+    word-break: break-all;
+}
+
+@media (max-width: 576px) {
+    .success-icon {
+        font-size: 3.5rem;
+    }
+}
+</style>
 
 {% endblock %}

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load humanize %}
 
 {% block title %}Paiements des gagnants{% endblock %}
@@ -7,130 +7,302 @@
 
 <div class="container py-4">
 
-  <!-- HEADER -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <!-- =====================================================
+         EN-TÊTE
+         ===================================================== -->
 
-    <h3 class="fw-bold text-success">
-      💸 Paiements des gagnants
-    </h3>
+    <div
+        class="d-flex flex-wrap justify-content-between
+               align-items-center gap-3 mb-4"
+    >
+        <div>
+            <h3 class="fw-bold text-success mb-1">
+                💸 Paiements des gagnants
+            </h3>
 
-  </div>
+            <p class="text-muted mb-0">
+                Suivi des règlements effectués au profit des gagnants.
+            </p>
+        </div>
 
-
-  {% if paiements %}
-
-  <div class="card shadow-sm border-0">
-
-    <div class="card-body p-0">
-
-      <div class="table-responsive">
-
-        <table class="table table-hover align-middle mb-0">
-
-          <thead class="table-success">
-
-            <tr>
-              <th>Groupe</th>
-              <th>Gagnant</th>
-              <th>Montant</th>
-              <th>Statut</th>
-              <th>Date</th>
-              <th>Message</th>
-              <th>Transaction</th>
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-          {% for p in paiements %}
-
-          <tr>
-
-            <td class="fw-semibold">
-              {{ p.group.nom }}
-            </td>
-
-            <td>
-              {{ p.gagnant.user.nom }}
-            </td>
-
-            <td class="fw-bold text-primary">
-
-              {{ p.montant|intcomma }} FCFA
-
-            </td>
-
-            <td>
-
-              {% if p.statut == 'SUCCES' %}
-
-                <span class="badge bg-success">
-                  ✔ Succès
-                </span>
-
-              {% else %}
-
-                <span class="badge bg-danger">
-                  ✖ Échec
-                </span>
-
-              {% endif %}
-
-            </td>
-
-            <td class="text-nowrap">
-
-              {{ p.date_paiement|date:"d/m/Y H:i" }}
-
-            </td>
-
-            <td>
-
-              {{ p.message|default:"—" }}
-
-            </td>
-
-            <td class="text-muted small">
-
-              {{ p.transaction_id|default:"—" }}
-
-            </td>
-
-          </tr>
-
-          {% endfor %}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
+        <a
+            href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
+            class="btn btn-outline-secondary"
+        >
+            ← Retour au tableau de bord
+        </a>
     </div>
 
-  </div>
 
-  {% else %}
+    <!-- =====================================================
+         MESSAGES
+         ===================================================== -->
 
-  <div class="card shadow-sm border-0 text-center">
+    {% if messages %}
+        {% for message in messages %}
+            <div
+                class="alert alert-{{ message.tags|default:'info' }}
+                       alert-dismissible fade show"
+                role="alert"
+            >
+                {{ message }}
 
-    <div class="card-body py-5">
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Fermer"
+                ></button>
+            </div>
+        {% endfor %}
+    {% endif %}
 
-      <div style="font-size:40px;">💳</div>
 
-      <p class="mt-3 text-muted">
+    <!-- =====================================================
+         LISTE DES PAIEMENTS
+         ===================================================== -->
 
-        Aucun paiement gagnant enregistré pour le moment.
+    {% if paiements %}
 
-      </p>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
 
-    </div>
+                <div class="table-responsive">
 
-  </div>
+                    <table class="table table-hover align-middle mb-0">
 
-  {% endif %}
+                        <thead class="table-success">
+                            <tr>
+                                <th scope="col">Groupe</th>
+                                <th scope="col">Gagnant</th>
+                                <th scope="col" class="text-end">
+                                    Montant
+                                </th>
+                                <th scope="col">Statut</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Message</th>
+                                <th scope="col">Transaction</th>
+                                <th scope="col" class="text-center">
+                                    Reçu
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for p in paiements %}
+                                <tr>
+
+                                    <!-- Groupe -->
+                                    <td class="fw-semibold">
+                                        {% if p.group %}
+                                            {{ p.group.nom }}
+                                        {% else %}
+                                            <span class="text-muted">
+                                                Groupe indisponible
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Gagnant -->
+                                    <td>
+                                        {% if p.gagnant %}
+                                            <div class="fw-semibold">
+                                                {{ p.gagnant.user.nom|default:p.gagnant.user.phone }}
+                                            </div>
+
+                                            {% if p.gagnant.user.phone %}
+                                                <small class="text-muted">
+                                                    {{ p.gagnant.user.phone }}
+                                                </small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">
+                                                Gagnant indisponible
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Montant -->
+                                    <td class="fw-bold text-primary text-end text-nowrap">
+                                        {{ p.montant|default:0|intcomma }}
+                                        FCFA
+                                    </td>
+
+
+                                    <!-- Statut -->
+                                    <td>
+                                        {% if p.statut == "SUCCES" %}
+
+                                            <span class="badge bg-success">
+                                                ✅ Succès
+                                            </span>
+
+                                        {% elif p.statut == "EN_ATTENTE" %}
+
+                                            <span class="badge bg-warning text-dark">
+                                                ⏳ En attente
+                                            </span>
+
+                                        {% elif p.statut == "ANNULE" %}
+
+                                            <span class="badge bg-secondary">
+                                                Annulé
+                                            </span>
+
+                                        {% elif p.statut == "ECHEC" %}
+
+                                            <span class="badge bg-danger">
+                                                ❌ Échec
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge bg-secondary">
+                                                {{ p.statut|default:"Inconnu" }}
+                                            </span>
+
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Date -->
+                                    <td class="text-nowrap">
+                                        {% if p.date_paiement %}
+                                            {{ p.date_paiement|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Message -->
+                                    <td>
+                                        {% if p.message %}
+                                            {{ p.message }}
+                                        {% else %}
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Transaction -->
+                                    <td class="small">
+                                        {% if p.transaction_id %}
+                                            <code>
+                                                {{ p.transaction_id }}
+                                            </code>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+
+                                    <!-- Reçu -->
+                                    <td class="text-center">
+
+                                        {% if p.receipt_url %}
+                                            <a
+                                                href="{{ p.receipt_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="btn btn-sm btn-outline-success"
+                                                title="Consulter le reçu"
+                                            >
+                                                🧾 Reçu
+                                            </a>
+
+                                        {% elif p.paydunya_receipt_url %}
+                                            <a
+                                                href="{{ p.paydunya_receipt_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="btn btn-sm btn-outline-success"
+                                                title="Consulter le reçu PayDunya"
+                                            >
+                                                🧾 PayDunya
+                                            </a>
+
+                                        {% else %}
+                                            <span class="text-muted small">
+                                                Indisponible
+                                            </span>
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- Nombre de paiements -->
+        <div class="mt-3 text-muted small">
+            {{ paiements|length }}
+            paiement{{ paiements|length|pluralize }}
+            affiché{{ paiements|length|pluralize }}.
+        </div>
+
+    {% else %}
+
+        <!-- =================================================
+             ÉTAT VIDE
+             ================================================= -->
+
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body py-5">
+
+                <div class="empty-icon mb-3">
+                    💳
+                </div>
+
+                <h5 class="fw-bold">
+                    Aucun paiement enregistré
+                </h5>
+
+                <p class="text-muted mb-0">
+                    Les paiements effectués au profit des gagnants
+                    apparaîtront ici.
+                </p>
+
+            </div>
+        </div>
+
+    {% endif %}
 
 </div>
+
+
+<style>
+.empty-icon {
+    font-size: 3rem;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+}
+
+code {
+    word-break: break-all;
+}
+</style>
 
 {% endblock %}

@@ -1,38 +1,131 @@
-{% extends 'cotisationtontine/base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Ajouter un versement{% endblock %}
 
 {% block content %}
 
 <div class="container py-5">
 
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-6">
+        <div class="col-12 col-md-10 col-lg-7 col-xl-6">
 
-            <div class="card shadow border-0">
+            {% if messages %}
+                {% for message in messages %}
+                    <div
+                        class="alert alert-{{ message.tags|default:'info' }}
+                               alert-dismissible fade show"
+                        role="alert"
+                    >
+                        {{ message }}
 
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">💰 Ajouter un versement</h4>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Fermer"
+                        ></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card shadow border-0 rounded-4">
+
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0 fw-bold">
+                        💰 Ajouter un versement
+                    </h4>
                 </div>
 
-                <div class="card-body">
+                <div class="card-body p-4">
 
-                    <form method="post" novalidate>
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form
+                        method="post"
+                        id="versement-form"
+                        class="needs-validation"
+                        novalidate
+                    >
                         {% csrf_token %}
 
-                        <div class="mb-3">
-                            {{ form.as_p }}
-                        </div>
+                        {% for field in form %}
+                            <div class="mb-3">
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                                <label
+                                    for="{{ field.id_for_label }}"
+                                    class="form-label fw-semibold"
+                                >
+                                    {{ field.label }}
 
-                            <button type="submit"
-                                    class="btn btn-primary w-100 w-md-auto">
-                                ✅ Valider
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {{ field }}
+
+                                {% if field.help_text %}
+                                    <div class="form-text">
+                                        {{ field.help_text }}
+                                    </div>
+                                {% endif %}
+
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in field.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                            </div>
+                        {% endfor %}
+
+                        <div class="d-flex flex-column flex-md-row gap-2 mt-4">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary flex-grow-1"
+                                id="submit-button"
+                            >
+                                ✅ Valider le versement
                             </button>
 
-                            <a href="{{ cancel_url }}"
-                               class="btn btn-outline-secondary w-100 w-md-auto">
-                                ❌ Annuler
-                            </a>
+                            <button
+                                type="button"
+                                class="btn btn-primary flex-grow-1 d-none"
+                                id="loading-button"
+                                disabled
+                            >
+                                <span
+                                    class="spinner-border spinner-border-sm me-2"
+                                    aria-hidden="true"
+                                ></span>
+
+                                Traitement en cours...
+                            </button>
+
+                            {% if cancel_url %}
+                                <a
+                                    href="{{ cancel_url }}"
+                                    class="btn btn-outline-secondary flex-grow-1"
+                                >
+                                    ❌ Annuler
+                                </a>
+                            {% else %}
+                                <a
+                                    href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
+                                    class="btn btn-outline-secondary flex-grow-1"
+                                >
+                                    ❌ Annuler
+                                </a>
+                            {% endif %}
 
                         </div>
 
@@ -46,5 +139,32 @@
     </div>
 
 </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("versement-form");
+    const submitButton = document.getElementById("submit-button");
+    const loadingButton = document.getElementById("loading-button");
+
+    if (!form || !submitButton || !loadingButton) {
+        return;
+    }
+
+    form.addEventListener("submit", function (event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            form.classList.add("was-validated");
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.classList.add("d-none");
+        loadingButton.classList.remove("d-none");
+    });
+});
+</script>
 
 {% endblock %}

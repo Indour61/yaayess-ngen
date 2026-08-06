@@ -22,3 +22,11 @@ from .payments import (
     refuser_versement,
     valider_versement,
 )
+
+
+from .paydunya import (
+    paydunya_callback,
+    paydunya_cancel,
+    paydunya_initier,
+    paydunya_return,
+)

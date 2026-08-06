@@ -508,6 +508,76 @@ TERMS_VERSION = os.getenv(
 )
 
 
+# =====================================================
+# PAYDUNYA
+# =====================================================
+
+PAYDUNYA_MODE = os.getenv(
+    "PAYDUNYA_MODE",
+    "test",
+).strip().lower()
+
+PAYDUNYA_MASTER_KEY = os.getenv(
+    "PAYDUNYA_MASTER_KEY",
+    "",
+)
+
+PAYDUNYA_PUBLIC_KEY = os.getenv(
+    "PAYDUNYA_PUBLIC_KEY",
+    "",
+)
+
+PAYDUNYA_PRIVATE_KEY = os.getenv(
+    "PAYDUNYA_PRIVATE_KEY",
+    "",
+)
+
+PAYDUNYA_TOKEN = os.getenv(
+    "PAYDUNYA_TOKEN",
+    "",
+)
+
+PAYDUNYA_STORE_NAME = os.getenv(
+    "PAYDUNYA_STORE_NAME",
+    "YAAYESS",
+)
+
+PAYDUNYA_STORE_TAGLINE = os.getenv(
+    "PAYDUNYA_STORE_TAGLINE",
+    "",
+)
+
+PAYDUNYA_STORE_PHONE = os.getenv(
+    "PAYDUNYA_STORE_PHONE",
+    "",
+)
+
+PAYDUNYA_STORE_WEBSITE = os.getenv(
+    "PAYDUNYA_STORE_WEBSITE",
+    "",
+)
+
+PAYDUNYA_STORE_LOGO = os.getenv(
+    "PAYDUNYA_STORE_LOGO",
+    "",
+)
+
+PAYDUNYA_RETURN_URL = os.getenv(
+    "PAYDUNYA_RETURN_URL",
+    "",
+)
+
+PAYDUNYA_CANCEL_URL = os.getenv(
+    "PAYDUNYA_CANCEL_URL",
+    "",
+)
+
+PAYDUNYA_CALLBACK_URL = os.getenv(
+    "PAYDUNYA_CALLBACK_URL",
+    "",
+)
+
+
 # ==========================================================
 # MODÈLES DJANGO
 # ==========================================================

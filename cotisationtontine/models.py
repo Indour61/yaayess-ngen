@@ -308,12 +308,10 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 
+from decimal import Decimal, ROUND_HALF_UP
 
-from decimal import Decimal
 from django.conf import settings
 from django.db import models
-
-from cotisationtontine.models import GroupMember
 
 
 class Versement(models.Model):
@@ -328,55 +326,76 @@ class Versement(models.Model):
         ("WAVE", "Wave"),
         ("OM", "Orange Money"),
         ("CAISSE", "Caisse"),
+        ("PAYDUNYA", "PayDunya"),
+    )
+
+    PAYDUNYA_STATUS_CHOICES = (
+        ("pending", "En attente"),
+        ("completed", "Terminé"),
+        ("cancelled", "Annulé"),
+        ("failed", "Échoué"),
     )
 
     member = models.ForeignKey(
         GroupMember,
         on_delete=models.CASCADE,
-        related_name='versements'
+        related_name="versements",
     )
 
-    # 🔁 TOUR
+    # =====================================================
+    # CYCLE ET TOUR
+    # =====================================================
+
     tour = models.PositiveIntegerField(
         default=1,
-        help_text="Numéro du tour de tontine"
+        help_text="Numéro du tour de tontine",
     )
 
-    # 🔁 CYCLE
     cycle = models.PositiveIntegerField(
         default=1,
-        help_text="Numéro du cycle"
+        help_text="Numéro du cycle",
     )
+
+    # =====================================================
+    # MONTANTS
+    # =====================================================
 
     montant = models.DecimalField(
         max_digits=12,
-        decimal_places=0
+        decimal_places=0,
     )
 
     frais = models.DecimalField(
         max_digits=12,
         decimal_places=0,
-        default=Decimal("0")
+        default=Decimal("0"),
     )
 
-    # 🔥 MÉTHODE DE PAIEMENT (amélioré)
+    # =====================================================
+    # MÉTHODE DE PAIEMENT
+    # =====================================================
+
     methode = models.CharField(
         max_length=20,
         choices=METHODE_CHOICES,
-        default="WAVE"
+        default="WAVE",
     )
 
-    # 🔥 PREUVE (AJOUT CRUCIAL)
     preuve = models.ImageField(
         upload_to="preuves/",
         null=True,
-        blank=True
+        blank=True,
     )
+
+    # =====================================================
+    # STATUT YAAYESS
+    # =====================================================
 
     statut = models.CharField(
         max_length=20,
         choices=STATUT_CHOICES,
-        default="EN_ATTENTE"
+        default="EN_ATTENTE",
+        db_index=True,
     )
 
     valide_par = models.ForeignKey(
@@ -384,60 +403,198 @@ class Versement(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="versements_valides_tontine"
+        related_name="versements_valides_tontine",
     )
 
-    date_creation = models.DateTimeField(auto_now_add=True)
-    date_validation = models.DateTimeField(null=True, blank=True)
+    date_creation = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    # 🔥 NOUVEAU : NOTE ADMIN (optionnel mais utile)
+    date_validation = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
     note_admin = models.TextField(
         blank=True,
         null=True,
-        help_text="Raison du refus ou commentaire"
+        help_text="Raison du refus ou commentaire",
+    )
+
+    # =====================================================
+    # PAYDUNYA
+    # =====================================================
+
+    paydunya_token = models.CharField(
+        max_length=150,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Token unique de la facture PayDunya",
+    )
+
+    paydunya_status = models.CharField(
+        max_length=30,
+        choices=PAYDUNYA_STATUS_CHOICES,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Statut transmis par PayDunya",
+    )
+
+    paydunya_invoice_url = models.URLField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Adresse de la page de paiement PayDunya",
+    )
+
+    paydunya_receipt_url = models.URLField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Adresse du reçu électronique PayDunya",
+    )
+
+    paydunya_customer_name = models.CharField(
+        max_length=150,
+        null=True,
+        blank=True,
+    )
+
+    paydunya_customer_phone = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
+    )
+
+    paydunya_customer_email = models.EmailField(
+        null=True,
+        blank=True,
+    )
+
+    paydunya_paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date de confirmation du paiement PayDunya",
+    )
+
+    paydunya_payload = models.JSONField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Dernière réponse PayDunya conservée pour audit "
+            "et rapprochement"
+        ),
     )
 
     class Meta:
         ordering = ["-date_creation"]
 
         indexes = [
-            models.Index(fields=["member", "tour"]),
-            models.Index(fields=["member", "cycle"]),
-            models.Index(fields=["statut"]),
-            models.Index(fields=["tour", "cycle"]),  # 🔥 optimisation forte
+            models.Index(
+                fields=["member", "tour"],
+            ),
+            models.Index(
+                fields=["member", "cycle"],
+            ),
+            models.Index(
+                fields=["tour", "cycle"],
+            ),
+            models.Index(
+                fields=["member", "cycle", "tour", "statut"],
+            ),
+            models.Index(
+                fields=["methode", "statut"],
+            ),
         ]
 
     def __str__(self):
         return (
             f"{self.member.user} - {self.montant} FCFA "
-            f"(Cycle {self.cycle} | Tour {self.tour}) [{self.statut}]"
+            f"(Cycle {self.cycle} | Tour {self.tour}) "
+            f"[{self.statut}]"
         )
 
     # =====================================================
-    # 🔹 SAVE AUTO (frais + cycle + tour)
+    # ENREGISTREMENT AUTOMATIQUE
     # =====================================================
+
     def save(self, *args, **kwargs):
+        """
+        Calcule les frais YAAYESS et complète le cycle et le tour
+        lorsqu'ils ne sont pas renseignés.
+        """
 
-        # 💰 calcul frais automatique
-        if not self.frais or self.frais == 0:
-            self.frais = (self.montant * Decimal("0.02")).quantize(Decimal("1"))
+        montant = Decimal(
+            str(self.montant or 0)
+        )
 
-        # 🔁 affecter cycle automatiquement
-        if not self.cycle and self.member and self.member.group:
-            self.cycle = self.member.group.cycle_numero
+        if self.frais is None or Decimal(str(self.frais)) == 0:
+            self.frais = (
+                montant * Decimal("0.02")
+            ).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
 
-        # 🔁 affecter tour automatiquement
-        if not self.tour and self.member and self.member.group:
-            self.tour = self.member.group.tour_actuel
+        if self.member_id:
+            group = self.member.group
+
+            if not self.cycle:
+                self.cycle = group.cycle_numero
+
+            if not self.tour:
+                self.tour = group.tour_actuel
 
         super().save(*args, **kwargs)
 
     # =====================================================
-    # 💰 MONTANT TOTAL (avec frais)
+    # PROPRIÉTÉS MÉTIER
     # =====================================================
+
     @property
     def montant_total(self):
-        return self.montant + self.frais
+        """
+        Montant payé par le client :
+        cotisation + frais YAAYESS.
+        """
+        montant = Decimal(
+            str(self.montant or 0)
+        )
+
+        frais = Decimal(
+            str(self.frais or 0)
+        )
+
+        return montant + frais
+
+    @property
+    def montant_a_payer(self):
+        """
+        Alias explicite utilisé lors de la création
+        de la facture PayDunya.
+        """
+        return self.montant_total
+
+    @property
+    def est_paiement_paydunya(self):
+        return self.methode == "PAYDUNYA"
+
+    @property
+    def est_paye_via_paydunya(self):
+        return (
+            self.methode == "PAYDUNYA"
+            and self.statut == "VALIDE"
+            and self.paydunya_status == "completed"
+        )
+
+    @property
+    def recu_paydunya_disponible(self):
+        return bool(
+            self.est_paye_via_paydunya
+            and self.paydunya_receipt_url
+        )
 
 
 # =====================================================
