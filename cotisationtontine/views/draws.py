@@ -5,10 +5,17 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_POST
 
 from cotisationtontine.models import Group, Tirage, Versement
 
+
+# ==========================================================
+# TIRAGE AU SORT
+# ==========================================================
+
 @login_required
+@require_POST
 @transaction.atomic
 def tirage_au_sort_view(request, group_id):
     """
@@ -18,23 +25,22 @@ def tirage_au_sort_view(request, group_id):
     des versements validés du cycle et du tour en cours.
     """
 
-    # =====================================================
-    # VERROUILLAGE DU GROUPE
-    # Empêche deux tirages simultanés sur le même groupe.
-    # =====================================================
-
+    # Verrouille le groupe pendant toute l'opération afin
+    # d'empêcher deux tirages simultanés.
     group = get_object_or_404(
         Group.objects.select_for_update(),
         id=group_id,
     )
 
-    # =====================================================
+    # ======================================================
     # CONTRÔLE DES PERMISSIONS
-    # =====================================================
+    # ======================================================
 
     if request.user != group.admin and not request.user.is_superuser:
         return JsonResponse(
-            {"error": "Accès non autorisé."},
+            {
+                "error": "Accès non autorisé.",
+            },
             status=403,
         )
 
@@ -45,15 +51,18 @@ def tirage_au_sort_view(request, group_id):
 
     if not membres_actifs.exists():
         return JsonResponse(
-            {"error": "Aucun membre actif dans ce groupe."},
+            {
+                "error": "Aucun membre actif dans ce groupe.",
+            },
             status=400,
         )
 
-    # =====================================================
-    # CYCLE COURANT
-    # =====================================================
+    # ======================================================
+    # CYCLE ET TOUR COURANTS
+    # ======================================================
 
     cycle_en_cours = group.cycle_numero
+    tour_en_cours = group.tour_actuel
 
     gagnants_ids = (
         group.tirages
@@ -65,9 +74,9 @@ def tirage_au_sort_view(request, group_id):
         id__in=gagnants_ids,
     )
 
-    # =====================================================
+    # ======================================================
     # CYCLE DÉJÀ TERMINÉ
-    # =====================================================
+    # ======================================================
 
     if not membres_restants.exists():
         group.cycle_termine = True
@@ -77,7 +86,7 @@ def tirage_au_sort_view(request, group_id):
             update_fields=[
                 "cycle_termine",
                 "is_active",
-            ]
+            ],
         )
 
         if group.auto_reset:
@@ -91,7 +100,7 @@ def tirage_au_sort_view(request, group_id):
                         "Un nouveau cycle a été démarré."
                     ),
                     "cycle": group.cycle_numero,
-                }
+                },
             )
 
         return JsonResponse(
@@ -106,16 +115,9 @@ def tirage_au_sort_view(request, group_id):
             status=400,
         )
 
-    # =====================================================
-    # TOUR COURANT
-    # =====================================================
-
-    tour_en_cours = group.tour_actuel
-
-    # =====================================================
-    # FILTRE STRICT :
-    # GROUPE + CYCLE + TOUR + STATUT VALIDÉ
-    # =====================================================
+    # ======================================================
+    # FILTRE STRICT DES VERSEMENTS VALIDÉS
+    # ======================================================
 
     versements_valides_q = Q(
         member__group=group,
@@ -124,9 +126,9 @@ def tirage_au_sort_view(request, group_id):
         tour=tour_en_cours,
     )
 
-    # =====================================================
+    # ======================================================
     # VÉRIFIER QUE TOUS LES MEMBRES ONT PAYÉ
-    # =====================================================
+    # ======================================================
 
     membres_non_a_jour = []
 
@@ -158,10 +160,9 @@ def tirage_au_sort_view(request, group_id):
             status=400,
         )
 
-    # =====================================================
+    # ======================================================
     # VÉRIFIER LES VERSEMENTS EN ATTENTE
-    # Il faut également filtrer par cycle.
-    # =====================================================
+    # ======================================================
 
     versements_en_attente = Versement.objects.filter(
         member__group=group,
@@ -176,26 +177,28 @@ def tirage_au_sort_view(request, group_id):
                 "error": (
                     "Tous les versements du cycle et du tour en cours "
                     "doivent être validés avant le tirage."
-                )
+                ),
             },
             status=400,
         )
 
-    # =====================================================
+    # ======================================================
     # MEMBRES ÉLIGIBLES
-    # =====================================================
+    # ======================================================
 
     membres_eligibles = list(membres_restants)
 
     if not membres_eligibles:
         return JsonResponse(
-            {"error": "Aucun membre éligible pour ce tirage."},
+            {
+                "error": "Aucun membre éligible pour ce tirage.",
+            },
             status=400,
         )
 
-    # =====================================================
+    # ======================================================
     # CALCUL DU MONTANT DU TOUR
-    # =====================================================
+    # ======================================================
 
     montant_total = (
         Versement.objects
@@ -211,21 +214,16 @@ def tirage_au_sort_view(request, group_id):
                 "error": (
                     "Le montant total des versements validés "
                     "du tour est nul."
-                )
+                ),
             },
             status=400,
         )
 
-    # =====================================================
+    # ======================================================
     # TIRAGE
-    # =====================================================
+    # ======================================================
 
     gagnant = random.choice(membres_eligibles)
-
-    # =====================================================
-    # ENREGISTREMENT DU TIRAGE
-    # Le montant est sauvegardé avant le passage au tour suivant.
-    # =====================================================
 
     tirage = Tirage.objects.create(
         group=group,
@@ -235,29 +233,30 @@ def tirage_au_sort_view(request, group_id):
         tour=tour_en_cours,
     )
 
-    # =====================================================
-    # MARQUER LE GAGNANT
-    # =====================================================
+    # ======================================================
+    # MISE À JOUR DU GAGNANT ET DU GROUPE
+    # ======================================================
 
     gagnant.a_recu = True
-    gagnant.save(update_fields=["a_recu"])
-
-    # =====================================================
-    # MÉMORISER LE DERNIER GAGNANT
-    # =====================================================
+    gagnant.save(
+        update_fields=[
+            "a_recu",
+        ],
+    )
 
     group.prochain_gagnant = gagnant
-    group.save(update_fields=["prochain_gagnant"])
+    group.save(
+        update_fields=[
+            "prochain_gagnant",
+        ],
+    )
 
-    # =====================================================
-    # PASSAGE AU TOUR SUIVANT
-    # =====================================================
-
+    # Passage au tour suivant.
     group.reset_apres_tirage()
 
-    # =====================================================
+    # ======================================================
     # VÉRIFIER SI LE CYCLE VIENT DE SE TERMINER
-    # =====================================================
+    # ======================================================
 
     gagnants_ids = (
         group.tirages
@@ -279,12 +278,12 @@ def tirage_au_sort_view(request, group_id):
             update_fields=[
                 "cycle_termine",
                 "is_active",
-            ]
+            ],
         )
 
-    # =====================================================
+    # ======================================================
     # NOM DU GAGNANT
-    # =====================================================
+    # ======================================================
 
     nom_gagnant = (
         gagnant.alias
@@ -292,10 +291,6 @@ def tirage_au_sort_view(request, group_id):
         or getattr(gagnant.user, "phone", "")
         or "Membre"
     )
-
-    # =====================================================
-    # RÉPONSE
-    # =====================================================
 
     return JsonResponse(
         {
@@ -306,33 +301,63 @@ def tirage_au_sort_view(request, group_id):
             "cycle": cycle_en_cours,
             "tour": tour_en_cours,
             "cycle_termine": cycle_termine,
-            "membres_restants": membres_restants_apres_tirage.count(),
-        }
+            "membres_restants": (
+                membres_restants_apres_tirage.count()
+            ),
+        },
     )
 
-from django.db.models import Sum, Q
-from django.http import HttpResponseForbidden
-from django.shortcuts import render, get_object_or_404
+
+# ==========================================================
+# RÉSULTAT DU TIRAGE
+# ==========================================================
 
 def tirage_resultat_view(request, group_id, token=None):
+    group = get_object_or_404(
+        Group,
+        id=group_id,
+    )
 
-    group = get_object_or_404(Group, id=group_id)
+    # ======================================================
+    # CONTRÔLE D'ACCÈS
+    # ======================================================
 
-    # -------------------------------------------------
-    # 🔐 SÉCURITÉ ACCÈS
-    # -------------------------------------------------
     is_member = False
+    is_admin = False
 
     if request.user.is_authenticated:
-        is_member = group.membres.filter(user=request.user).exists()
+        is_member = group.membres.filter(
+            user=request.user,
+        ).exists()
 
-    if not is_member:
-        if not token or str(getattr(group, "access_token", "")) != str(token):
-            return HttpResponseForbidden("❌ Accès refusé")
+        is_admin = (
+            request.user == group.admin
+            or request.user.is_superuser
+            or getattr(
+                request.user,
+                "is_super_admin",
+                False,
+            )
+        )
 
-    # -------------------------------------------------
-    # 📊 TIRAGES
-    # -------------------------------------------------
+    if not is_member and not is_admin:
+        access_token = str(
+            getattr(
+                group,
+                "access_token",
+                "",
+            )
+        )
+
+        if not token or access_token != str(token):
+            return HttpResponseForbidden(
+                "Accès refusé.",
+            )
+
+    # ======================================================
+    # TIRAGES
+    # ======================================================
+
     tirages = (
         group.tirages
         .select_related("gagnant__user")
@@ -346,46 +371,49 @@ def tirage_resultat_view(request, group_id, token=None):
     cycle_actuel = group.cycle_numero
     tour_affiche = group.tour_actuel
 
-    # -------------------------------------------------
-    # 🔥 UTILISER LE DERNIER TIRAGE (CORRECTION CLÉ)
-    # -------------------------------------------------
     if dernier_tirage:
         gagnant = dernier_tirage.gagnant
-        cycle_actuel = dernier_tirage.cycle_number or 1
-
-        # 🔥 LE BON MONTANT
+        cycle_actuel = (
+            dernier_tirage.cycle_number
+            or group.cycle_numero
+        )
         montant_total = dernier_tirage.montant
-
-        # 🔥 LE BON TOUR
         tour_affiche = dernier_tirage.tour
 
-    # -------------------------------------------------
-    # 👥 MEMBRES
-    # -------------------------------------------------
-    membres_actifs = group.membres.filter(actif=True, exit_liste=False)
+    # ======================================================
+    # ÉTAT DU CYCLE
+    # ======================================================
 
-    gagnants_ids = tirages.filter(
-        cycle_number=cycle_actuel
-    ).values_list("gagnant_id", flat=True)
+    membres_actifs = group.membres.filter(
+        actif=True,
+        exit_liste=False,
+    )
 
-    membres_restants = membres_actifs.exclude(id__in=gagnants_ids)
+    gagnants_ids = (
+        tirages
+        .filter(cycle_number=cycle_actuel)
+        .values_list("gagnant_id", flat=True)
+    )
 
-    # -------------------------------------------------
-    # 🎯 ÉTAT DU CYCLE
-    # -------------------------------------------------
+    membres_restants = membres_actifs.exclude(
+        id__in=gagnants_ids,
+    )
+
     cycle_termine = not membres_restants.exists()
     tirage_possible = membres_restants.exists()
 
-    # 📊 progression
-    total = membres_actifs.count()
+    total_membres = membres_actifs.count()
     restants = membres_restants.count()
-    termines = total - restants
+    termines = total_membres - restants
 
-    progress = int((termines / total) * 100) if total > 0 else 0
+    progress = (
+        int(
+            (termines / total_membres) * 100
+        )
+        if total_membres > 0
+        else 0
+    )
 
-    # -------------------------------------------------
-    # 📦 CONTEXT
-    # -------------------------------------------------
     context = {
         "group": group,
         "tirages": tirages,
@@ -396,49 +424,40 @@ def tirage_resultat_view(request, group_id, token=None):
         "cycle_termine": cycle_termine,
         "nb_restants": restants,
         "progress": progress,
-
-        # 🔥 IMPORTANT
         "tour_affiche": tour_affiche,
     }
 
     return render(
         request,
         "cotisationtontine/tirage_resultat.html",
-        context
+        context,
     )
 
 
-# =====================================================
-# MEMBRES ÉLIGIBLES POUR TIRAGE
-# =====================================================
+# ==========================================================
+# MEMBRES ÉLIGIBLES POUR UN TIRAGE
+# ==========================================================
 
 def membres_eligibles_pour_tirage(group):
     """
-    Retourne les membres actifs éligibles au tirage.
-    Exclut les membres ayant déjà gagné dans le cycle courant.
+    Retourne les membres actifs qui n'ont pas encore gagné
+    pendant le cycle courant.
     """
 
-    # Membres actifs
     membres_actifs = group.membres.filter(
         actif=True,
-        exit_liste=False
+        exit_liste=False,
     )
 
     if not membres_actifs.exists():
-        return membres_actifs  # vide
-
-    # Membres ayant déjà gagné
-    gagnants_ids = group.tirages.values_list(
-        "gagnant_id",
-        flat=True
-    )
-
-    membres_restants = membres_actifs.exclude(
-        id__in=gagnants_ids
-    )
-
-    # 🎯 Si tout le monde a gagné → nouveau cycle
-    if not membres_restants.exists():
         return membres_actifs
 
-    return membres_restants
+    gagnants_ids = (
+        group.tirages
+        .filter(cycle_number=group.cycle_numero)
+        .values_list("gagnant_id", flat=True)
+    )
+
+    return membres_actifs.exclude(
+        id__in=gagnants_ids,
+    )

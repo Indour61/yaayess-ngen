@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load humanize %}
 
 {% block title %}Détails du groupe{% endblock %}
@@ -7,383 +7,713 @@
 
 <div class="container py-4">
 
-<!-- 🔔 Messages -->
-{% if messages %}
-{% for message in messages %}
-<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show fw-bold">
-    {{ message|safe }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endfor %}
-{% endif %}
+    <!-- =====================================================
+         MESSAGES
+         ===================================================== -->
 
-<!-- 📌 Carte groupe -->
-<div class="card shadow-sm border-0 mb-4 rounded-3 group-header">
-    <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+    {% if messages %}
+        {% for message in messages %}
+            <div
+                class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show fw-bold"
+                role="alert"
+            >
+                {{ message }}
 
-        <div>
-            <h2 class="fw-bold text-success mb-1">{{ group.nom }}</h2>
-            <small class="text-muted">📅 {{ group.date_creation|date:"d/m/Y" }}</small><br>
-
-            {% if group.date_reset %}
-            <small class="text-muted">
-                🔁 Dernier reset : {{ group.date_reset|date:"d/m/Y H:i" }}
-            </small>
-            {% endif %}
-        </div>
-
-        <div class="text-end">
-            <div class="fs-3 fw-bold text-primary">
-                {{ group.montant_base|intcomma }} FCFA
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Fermer"
+                ></button>
             </div>
-            <small class="text-muted">Montant de base</small>
-        </div>
-
-    </div>
-</div>
-
-<!-- 🎲 STATUT + RESET (🔥 AMÉLIORÉ) -->
-<div class="card shadow-sm border-0 mb-4">
-<div class="card-body text-center">
-
-{% if cycle_termine %}
-
-    <span class="badge bg-success mb-3 fs-6">
-        ✅ Cycle terminé
-    </span>
-
-    {% if user_is_admin %}
-    <form action="{% url 'cotisationtontine:reset_cycle' group.id %}" method="post">
-        {% csrf_token %}
-        <button class="btn btn-danger btn-lg w-100"
-                onclick="return confirm('Démarrer un nouveau cycle ?')">
-            🔄 Démarrer un nouveau cycle
-        </button>
-    </form>
+        {% endfor %}
     {% endif %}
 
-{% else %}
 
-    <span class="badge bg-warning text-dark mb-3 fs-6">
-        ⏳ Cycle en cours ({{ nb_restants }} restant(s))
-    </span>
+    <!-- =====================================================
+         CARTE DU GROUPE
+         ===================================================== -->
 
-    <div class="progress mb-3" style="height: 20px;">
-        <div class="progress-bar bg-success"
-             style="width: {{ progress }}%;">
-            {{ progress }}%
-        </div>
-    </div>
-
-    {% if user_is_admin %}
-    <button class="btn btn-secondary w-100" disabled>
-        🔒 Reset indisponible
-    </button>
-    {% endif %}
-
-{% endif %}
-
-</div>
-</div>
-
-<!-- 🔔 NOTIFICATIONS -->
-<div class="card border-warning shadow-sm mb-4">
-<div class="card-header bg-warning text-dark">🔔 Activités</div>
-
-<div class="card-body" style="max-height:200px; overflow:auto;">
-{% for notif in notifications %}
-<div class="mb-2">
-    {{ notif.message }}
-    <small class="text-muted">{{ notif.created_at|date:"d/m H:i" }}</small>
-</div>
-{% empty %}
-<p class="text-muted">Aucune activité</p>
-{% endfor %}
-</div>
-</div>
-
-<!-- 📊 Résumé -->
-<div class="row text-center g-3 mb-4">
-
-<div class="col-md-4">
-<div class="card shadow-sm p-3">
-<h6 class="text-muted">Tirages</h6>
-<h4>{{ total_tirages }}</h4>
-</div>
-</div>
-
-<div class="col-md-4">
-<div class="card shadow-sm p-3">
-<h6 class="text-muted">Membres</h6>
-<h4>{{ membres|length }}</h4>
-</div>
-</div>
-
-<div class="col-md-4">
-<div class="card shadow-sm p-3">
-<h6 class="text-muted">Total cotisé</h6>
-<h4>{{ total_montant|intcomma }} FCFA</h4>
-</div>
-</div>
-
-</div>
-
-<!-- 🔗 Invitation -->
-{% if user_is_admin %}
-<div class="card border-success shadow-sm mb-4">
-<div class="card-body">
-
-<h6 class="fw-bold text-success">🔗 Lien d'invitation</h6>
-
-<div class="input-group mb-2">
-<input id="inviteLink" value="{{ invite_url }}" readonly class="form-control">
-<button class="btn btn-outline-secondary" onclick="copyInvite()">📋</button>
-</div>
-
-</div>
-</div>
-{% endif %}
-
-<!-- 🚨 ALERT -->
-{% if user_is_admin %}
-<div class="card shadow-sm mb-4 border-warning">
-    <div class="card-header bg-warning text-dark fw-bold">
-        💰 Versements en attente
-    </div>
-
-    <div class="card-body">
-
-        {% for v in versements_en_attente_liste %}
-        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-
+    <div class="card shadow-sm border-0 mb-4 rounded-3 group-header">
+        <div
+            class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3"
+        >
             <div>
-                <strong>{{ v.member.user.nom|default:v.member.user.phone }}</strong><br>
-                <small>{{ v.montant|intcomma }} FCFA</small>
+                <h2 class="fw-bold text-success mb-1">
+                    {{ group.nom }}
+                </h2>
+
+                <small class="text-muted">
+                    📅 {{ group.date_creation|date:"d/m/Y" }}
+                </small>
+
+                {% if group.date_reset %}
+                    <br>
+                    <small class="text-muted">
+                        🔁 Dernier reset :
+                        {{ group.date_reset|date:"d/m/Y H:i" }}
+                    </small>
+                {% endif %}
             </div>
 
-            <div class="d-flex gap-2">
+            <div class="text-end">
+                <div class="fs-3 fw-bold text-primary">
+                    {{ group.montant_base|intcomma }} FCFA
+                </div>
 
-                {% if v.preuve %}
-                <a href="{{ v.preuve.url }}" target="_blank" class="btn btn-sm btn-info">
-                    👁 Preuve
-                </a>
+                <small class="text-muted">
+                    Montant de base
+                </small>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         STATUT DU CYCLE ET RESET
+         ===================================================== -->
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body text-center">
+
+            {% if cycle_termine %}
+
+                <span class="badge bg-success mb-3 fs-6">
+                    ✅ Cycle terminé
+                </span>
+
+                {% if user_is_admin %}
+                    <form
+                        action="{% url 'cotisationtontine:reset_cycle' group.id %}"
+                        method="post"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-danger btn-lg w-100"
+                            onclick="return confirm(
+                                'Confirmer le démarrage d’un nouveau cycle ?'
+                            );"
+                        >
+                            🔄 Démarrer un nouveau cycle
+                        </button>
+                    </form>
                 {% endif %}
 
-                <a href="{% url 'cotisationtontine:valider_versement' v.id %}"
-                   class="btn btn-sm btn-success">
-                    ✅
-                </a>
+            {% else %}
 
-                <a href="{% url 'cotisationtontine:refuser_versement' v.id %}"
-                   class="btn btn-sm btn-danger">
-                    ❌
-                </a>
+                <span class="badge bg-warning text-dark mb-3 fs-6">
+                    ⏳ Cycle en cours — {{ nb_restants }} restant(s)
+                </span>
 
-            </div>
+                <div
+                    class="progress mb-3"
+                    style="height: 20px;"
+                    role="progressbar"
+                    aria-valuenow="{{ progress }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                >
+                    <div
+                        class="progress-bar bg-success"
+                        style="width: {{ progress }}%;"
+                    >
+                        {{ progress }} %
+                    </div>
+                </div>
+
+                {% if user_is_admin %}
+                    <button
+                        type="button"
+                        class="btn btn-secondary w-100"
+                        disabled
+                    >
+                        🔒 Reset indisponible
+                    </button>
+                {% endif %}
+
+            {% endif %}
 
         </div>
-        {% empty %}
-        <p class="text-muted">Aucun versement en attente</p>
-        {% endfor %}
+    </div>
+
+
+    <!-- =====================================================
+         NOTIFICATIONS
+         ===================================================== -->
+
+    <div class="card border-warning shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark fw-bold">
+            🔔 Activités
+        </div>
+
+        <div
+            class="card-body"
+            style="max-height: 200px; overflow: auto;"
+        >
+            {% for notif in notifications %}
+                <div class="mb-2 border-bottom pb-2">
+                    <div>{{ notif.message }}</div>
+
+                    <small class="text-muted">
+                        {{ notif.created_at|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">
+                    Aucune activité
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         RÉSUMÉ
+         ===================================================== -->
+
+    <div class="row text-center g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 h-100">
+                <h6 class="text-muted">Tirages</h6>
+                <h4>{{ total_tirages|default:0 }}</h4>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 h-100">
+                <h6 class="text-muted">Membres</h6>
+                <h4>{{ membres|length }}</h4>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3 h-100">
+                <h6 class="text-muted">Total cotisé</h6>
+
+                <h4>
+                    {{ total_montant|default:0|intcomma }} FCFA
+                </h4>
+            </div>
+        </div>
 
     </div>
-</div>
-{% endif %}
 
 
-<!-- 🎲 ACTIONS -->
-{% if user_is_admin %}
-<div class="d-flex gap-2 mb-4 flex-wrap">
+    <!-- =====================================================
+         LIEN D’INVITATION
+         ===================================================== -->
 
-<button onclick="lancerTirage()" class="btn btn-primary"
-{% if cycle_termine %}disabled{% endif %}>
-🎲 Tirage
-</button>
+    {% if user_is_admin %}
+        <div class="card border-success shadow-sm mb-4">
+            <div class="card-body">
 
-<a href="{% url 'cotisationtontine:tirage_resultat' group.id %}" class="btn btn-success">
-📊 Résultats
-</a>
+                <h6 class="fw-bold text-success">
+                    🔗 Lien d’invitation
+                </h6>
 
-<a href="{% url 'cotisationtontine:historique_cycles' group.id %}" class="btn btn-dark">
-📜 Historique
-</a>
+                <div class="input-group">
+                    <input
+                        id="inviteLink"
+                        type="text"
+                        value="{{ invite_url }}"
+                        readonly
+                        class="form-control"
+                        aria-label="Lien d’invitation"
+                    >
 
-<a href="{{ invite_url }}" class="btn btn-outline-success">
-➕ Ajouter membre
-</a>
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        onclick="copyInvite()"
+                    >
+                        📋 Copier
+                    </button>
+                </div>
 
-</div>
-
-<td>
-    {% if v.preuve %}
-        <a href="{{ v.preuve.url }}" target="_blank">
-            <img src="{{ v.preuve.url }}"
-                 width="50"
-                 height="50"
-                 style="object-fit:cover; border-radius:5px;">
-        </a>
-    {% else %}
-        <span class="text-muted">Aucune</span>
+            </div>
+        </div>
     {% endif %}
-</td>
-
-{% endif %}
-
-<!-- 👥 MEMBRES -->
-<h4 class="fw-bold mb-3">👥 Membres</h4>
-
-<div class="table-responsive shadow-sm">
-<table class="table table-bordered align-middle">
-
-<thead class="table-light">
-<tr>
-<th>Nom</th>
-<th>Paiement</th>
-<th>Total</th>
-<th>Date</th>
-<th>Téléphone</th>
-</tr>
-</thead>
-
-<tbody>
-{% for m in membres %}
-<tr>
-
-<td>
-{{ m.user.nom|default:m.user.phone }}
-{% if m.user == group.admin %}
-<span class="badge bg-success">Admin</span>
-{% endif %}
-</td>
-
-<td>
-
-{% if m.versement_en_attente %}
-    <span class="badge bg-warning">⏳ En attente</span>
-
-{% elif m.total_montant >= group.montant_base %}
-    <span class="badge bg-success">✅ Payé</span>
-
-{% elif m.user == request.user or user_is_admin %}
-    <!-- 🔥 ADMIN OU MEMBRE -->
-    <a href="{% url 'cotisationtontine:initier_versement' m.id %}"
-       class="btn btn-primary btn-sm">
-        💳 Payer
-    </a>
-
-{% else %}
-    <span class="badge bg-secondary">👤</span>
-{% endif %}
-
-</td>
 
 
-<td>{{ m.total_montant|intcomma }} FCFA</td>
-<td>{{ m.last_date|date:"d/m/Y H:i"|default:"-" }}</td>
-<td>{{ m.user.phone }}</td>
+    <!-- =====================================================
+         VERSEMENTS EN ATTENTE
+         ===================================================== -->
 
-</tr>
-{% endfor %}
-</tbody>
+    {% if user_is_admin %}
+        <div class="card shadow-sm mb-4 border-warning">
+            <div class="card-header bg-warning text-dark fw-bold">
+                💰 Versements en attente
+            </div>
 
-</table>
-</div>
-<h4 class="fw-bold mt-5 mb-3">💰 Historique des 10 derniers versements</h4>
+            <div class="card-body">
 
-<div class="table-responsive shadow-sm">
+                {% for v in versements_en_attente_liste %}
+                    <div
+                        class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom py-3"
+                    >
+                        <div>
+                            <strong>
+                                {{ v.member.user.nom|default:v.member.user.phone }}
+                            </strong>
 
-<table class="table table-bordered">
+                            <br>
 
-<thead class="table-light">
-<tr>
-    <th>Membre</th>
-    <th>Montant</th>
-    <th>Statut</th>
-    <th>Date</th>
-    <th>Preuve</th>
-</tr>
-</thead>
+                            <small>
+                                {{ v.montant|intcomma }} FCFA
+                            </small>
+                        </div>
 
-<tbody>
+                        <div class="d-flex gap-2 flex-wrap">
 
-{% for v in versements_list %}
-<tr>
+                            {% if v.preuve %}
+                                <a
+                                    href="{{ v.preuve.url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-sm btn-info"
+                                >
+                                    👁 Preuve
+                                </a>
+                            {% endif %}
 
-<td>{{ v.member.user.nom|default:v.member.user.phone }}</td>
+                            <form
+                                method="post"
+                                action="{% url 'cotisationtontine:valider_versement' v.id %}"
+                                class="d-inline"
+                                onsubmit="return confirm(
+                                    'Confirmer la validation de ce versement ?'
+                                );"
+                            >
+                                {% csrf_token %}
 
-<td>{{ v.montant|intcomma }} FCFA</td>
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-success"
+                                    title="Valider le versement"
+                                >
+                                    ✅ Valider
+                                </button>
+                            </form>
 
-<td>
-{% if v.statut == "VALIDE" %}
-    <span class="badge bg-success">Validé</span>
-{% elif v.statut == "EN_ATTENTE" %}
-    <span class="badge bg-warning text-dark">En attente</span>
-{% else %}
-    <span class="badge bg-danger">Refusé</span>
-{% endif %}
-</td>
+                            <form
+                                method="post"
+                                action="{% url 'cotisationtontine:refuser_versement' v.id %}"
+                                class="d-inline"
+                                onsubmit="return confirm(
+                                    'Confirmer le refus de ce versement ?'
+                                );"
+                            >
+                                {% csrf_token %}
 
-<td>{{ v.date_creation|date:"d/m/Y H:i" }}</td>
-<td>
-    {% if v.preuve %}
-        <img src="{{ v.preuve.url }}"
-             width="50"
-             height="50"
-             class="img-thumbnail preuve-img"
-             data-img="{{ v.preuve.url }}"
-             style="cursor:pointer;">
-    {% else %}
-        <span class="text-muted">Aucune</span>
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-danger"
+                                    title="Refuser le versement"
+                                >
+                                    ❌ Refuser
+                                </button>
+                            </form>
+
+                        </div>
+                    </div>
+
+                {% empty %}
+                    <p class="text-muted mb-0">
+                        Aucun versement en attente
+                    </p>
+                {% endfor %}
+
+            </div>
+        </div>
     {% endif %}
-</td>
 
-</tr>
-{% empty %}
-<tr>
-    <td colspan="4" class="text-center text-muted">
-        Aucun paiement
-    </td>
-</tr>
 
-{% endfor %}
+    <!-- =====================================================
+         ACTIONS DU GROUPE
+         ===================================================== -->
 
-</tbody>
+    {% if user_is_admin %}
+        <div class="d-flex gap-2 mb-4 flex-wrap">
 
-<tfoot>
-<tr class="fw-bold table-light">
-    <td>Total</td>
-    <td>{{ total_global|intcomma }} FCFA</td>
-    <td colspan="2"></td>
-</tr>
-</tfoot>
+            <form
+                id="tirageForm"
+                method="post"
+                action="{% url 'cotisationtontine:tirage_au_sort' group.id %}"
+                class="d-inline"
+            >
+                {% csrf_token %}
 
-</table>
+                <button
+                    id="tirageButton"
+                    type="submit"
+                    class="btn btn-primary"
+                    {% if cycle_termine %}disabled{% endif %}
+                >
+                    🎲 Tirage
+                </button>
+            </form>
+
+            <a
+                href="{% url 'cotisationtontine:tirage_resultat' group.id %}"
+                class="btn btn-success"
+            >
+                📊 Résultats
+            </a>
+
+            <a
+                href="{% url 'cotisationtontine:historique_cycles' group.id %}"
+                class="btn btn-dark"
+            >
+                📜 Historique
+            </a>
+
+            <a
+                href="{{ invite_url }}"
+                class="btn btn-outline-success"
+            >
+                ➕ Ajouter un membre
+            </a>
+
+        </div>
+    {% endif %}
+
+
+    <!-- =====================================================
+         MEMBRES
+         ===================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        👥 Membres
+    </h4>
+
+    <div class="table-responsive shadow-sm mb-4">
+        <table class="table table-bordered align-middle mb-0">
+
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Paiement</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                    <th>Téléphone</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for m in membres %}
+                    <tr>
+
+                        <td>
+                            {{ m.user.nom|default:m.user.phone }}
+
+                            {% if m.user == group.admin %}
+                                <span class="badge bg-success">
+                                    Admin
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if m.versement_en_attente %}
+
+                                <span class="badge bg-warning text-dark">
+                                    ⏳ En attente
+                                </span>
+
+                            {% elif m.total_montant >= group.montant_base %}
+
+                                <span class="badge bg-success">
+                                    ✅ Payé
+                                </span>
+
+                            {% elif m.user == request.user or user_is_admin %}
+
+                                <a
+                                    href="{% url 'cotisationtontine:initier_versement' m.id %}"
+                                    class="btn btn-primary btn-sm"
+                                >
+                                    💳 Payer
+                                </a>
+
+                            {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Non payé
+                                </span>
+
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ m.total_montant|default:0|intcomma }} FCFA
+                        </td>
+
+                        <td>
+                            {{ m.last_date|date:"d/m/Y H:i"|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ m.user.phone }}
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td
+                            colspan="5"
+                            class="text-center text-muted"
+                        >
+                            Aucun membre
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+
+    <!-- =====================================================
+         HISTORIQUE DES VERSEMENTS
+         ===================================================== -->
+
+    <h4 class="fw-bold mt-5 mb-3">
+        💰 Historique des 10 derniers versements
+    </h4>
+
+    <div class="table-responsive shadow-sm">
+        <table class="table table-bordered align-middle mb-0">
+
+            <thead class="table-light">
+                <tr>
+                    <th>Membre</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                    <th>Preuve</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for v in versements_list %}
+                    <tr>
+
+                        <td>
+                            {{ v.member.user.nom|default:v.member.user.phone }}
+                        </td>
+
+                        <td>
+                            {{ v.montant|intcomma }} FCFA
+                        </td>
+
+                        <td>
+                            {% if v.statut == "VALIDE" %}
+
+                                <span class="badge bg-success">
+                                    Validé
+                                </span>
+
+                            {% elif v.statut == "EN_ATTENTE" %}
+
+                                <span class="badge bg-warning text-dark">
+                                    En attente
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-danger">
+                                    Refusé
+                                </span>
+
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ v.date_creation|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td>
+                            {% if v.preuve %}
+                                <a
+                                    href="{{ v.preuve.url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <img
+                                        src="{{ v.preuve.url }}"
+                                        width="50"
+                                        height="50"
+                                        class="img-thumbnail preuve-img"
+                                        alt="Preuve de paiement"
+                                        style="cursor: pointer; object-fit: cover;"
+                                    >
+                                </a>
+                            {% else %}
+                                <span class="text-muted">
+                                    Aucune
+                                </span>
+                            {% endif %}
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td
+                            colspan="5"
+                            class="text-center text-muted"
+                        >
+                            Aucun paiement
+                        </td>
+                    </tr>
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr class="fw-bold table-light">
+                    <td>Total</td>
+
+                    <td>
+                        {{ total_global|default:0|intcomma }} FCFA
+                    </td>
+
+                    <td colspan="3"></td>
+                </tr>
+            </tfoot>
+
+        </table>
+    </div>
 
 </div>
-</div>
+
+
+<!-- =====================================================
+     JAVASCRIPT
+     ===================================================== -->
 
 <script>
-function copyInvite(){
-    let link = document.getElementById("inviteLink").value;
-    navigator.clipboard.writeText(link);
-    alert("Lien copié !");
+function copyInvite() {
+    const inviteInput = document.getElementById("inviteLink");
+
+    if (!inviteInput) {
+        return;
+    }
+
+    navigator.clipboard
+        .writeText(inviteInput.value)
+        .then(function () {
+            alert("Lien copié !");
+        })
+        .catch(function () {
+            inviteInput.select();
+            document.execCommand("copy");
+            alert("Lien copié !");
+        });
 }
 
-function lancerTirage(){
-    fetch("{% url 'cotisationtontine:tirage_au_sort' group.id %}")
-    .then(res => res.json())
-    .then(data => {
-        if(data.error){ alert(data.error); return; }
-        if(data.reset){ alert(data.message); location.reload(); return; }
-        window.location.href = "{% url 'cotisationtontine:tirage_resultat' group.id %}";
+
+document.addEventListener("DOMContentLoaded", function () {
+    const tirageForm = document.getElementById("tirageForm");
+    const tirageButton = document.getElementById("tirageButton");
+
+    if (!tirageForm || !tirageButton) {
+        return;
+    }
+
+    tirageForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const confirmed = confirm(
+            "Confirmer le lancement du tirage ? Cette action est irréversible."
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        tirageButton.disabled = true;
+        tirageButton.textContent = "Tirage en cours...";
+
+        try {
+            const formData = new FormData(tirageForm);
+
+            const response = await fetch(
+                tirageForm.action,
+                {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                }
+            );
+
+            let data;
+
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                throw new Error(
+                    "Réponse invalide reçue du serveur."
+                );
+            }
+
+            if (!response.ok) {
+                let message = (
+                    data.error
+                    || data.message
+                    || "Impossible d’effectuer le tirage."
+                );
+
+                if (
+                    Array.isArray(data.non_payes)
+                    && data.non_payes.length > 0
+                ) {
+                    message += (
+                        "\n\nMembres non à jour :\n- "
+                        + data.non_payes.join("\n- ")
+                    );
+                }
+
+                alert(message);
+                return;
+            }
+
+            if (data.reset) {
+                alert(data.message);
+                window.location.reload();
+                return;
+            }
+
+            window.location.href =
+                "{% url 'cotisationtontine:tirage_resultat' group.id %}";
+
+        } catch (error) {
+            console.error(error);
+
+            alert(
+                error.message
+                || "Une erreur technique est survenue pendant le tirage."
+            );
+
+        } finally {
+            tirageButton.disabled = false;
+            tirageButton.textContent = "🎲 Tirage";
+        }
     });
-}
-
+});
 </script>
 
+
 <style>
-.group-header{
-  border-left:5px solid #198754;
+.group-header {
+    border-left: 5px solid #198754;
 }
 </style>
 
