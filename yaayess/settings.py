@@ -1,46 +1,91 @@
+"""
+Configuration Django du projet YAAYESS.
+"""
+
 import os
+from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
-from datetime import timedelta
-from datetime import timedelta
+
+
+# ==========================================================
+# CHEMINS ET VARIABLES D'ENVIRONNEMENT
+# ==========================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Charge .env le plus tôt possible (et écrase les valeurs vides du système si besoin)
-load_dotenv(BASE_DIR / ".env", override=True)
-
-#ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
-
-
-# ---- ensuite seulement, lis tes variables ----
-SECRET_KEY = os.environ["SECRET_KEY"]                 # déjà dans ton .env
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")          # ⬅️ lira bien la valeur du .env
-if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY manquante. Vérifie .env ou les variables d'environnement.")
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
-    "http://127.0.0.1",
-    "http://localhost:3000",
-]
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-EMAIL_HOST = 'smtp-relay.brevo.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-
-EMAIL_HOST_USER = 'a5d583001@smtp-brevo.com'
+# En local, charge BASE_DIR/.env.
+# Sur le VPS, les variables définies par systemd restent prioritaires.
+load_dotenv(BASE_DIR / ".env", override=False)
 
 
-EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY")
+def env_bool(name: str, default: bool = False) -> bool:
+    """
+    Convertit une variable d'environnement en booléen.
+    """
+    value = os.getenv(name)
 
-# ----------------------------------------------------
-# 🗄 DATABASE - Version sécurisée
-# ----------------------------------------------------
+    if value is None:
+        return default
+
+    return value.strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    """
+    Convertit une variable séparée par des virgules en liste.
+    """
+    raw_value = os.getenv(name, default)
+
+    return [
+        value.strip()
+        for value in raw_value.split(",")
+        if value.strip()
+    ]
+
+
+# ==========================================================
+# CONFIGURATION GÉNÉRALE
+# ==========================================================
+
+SECRET_KEY = os.environ["SECRET_KEY"]
+
+DEBUG = env_bool(
+    "DEBUG",
+    default=False,
+)
+
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
+    default=(
+        "localhost,"
+        "127.0.0.1,"
+        "yaayess-ngen.shop,"
+        "www.yaayess-ngen.shop"
+    ),
+)
+
+
+# ==========================================================
+# OPENAI
+# ==========================================================
+
+OPENAI_API_KEY = os.getenv(
+    "OPENAI_API_KEY",
+    "",
+)
+
+
+# ==========================================================
+# BASE DE DONNÉES
+# ==========================================================
+
 DATABASES = {
     "default": {
         "ENGINE": os.getenv(
@@ -50,99 +95,246 @@ DATABASES = {
         "NAME": os.environ["DB_NAME"],
         "USER": os.environ["DB_USER"],
         "PASSWORD": os.environ["DB_PASSWORD"],
-        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-        "PORT": os.getenv("DB_PORT", "5432"),
+        "HOST": os.getenv(
+            "DB_HOST",
+            "127.0.0.1",
+        ),
+        "PORT": os.getenv(
+            "DB_PORT",
+            "5432",
+        ),
+        "CONN_MAX_AGE": int(
+            os.getenv(
+                "DB_CONN_MAX_AGE",
+                "60",
+            )
+        ),
     }
 }
 
 
-SESSION_COOKIE_AGE = 3600  # 1 heure
+# ==========================================================
+# APPLICATIONS
+# ==========================================================
+
+INSTALLED_APPS = [
+    # Django
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.humanize",
+
+    # Applications tierces
+    "django_countries",
+    "rest_framework",
+    "widget_tweaks",
+    "corsheaders",
+    "rest_framework_simplejwt.token_blacklist",
+    "whitenoise.runserver_nostatic",
+
+    # Applications YAAYESS
+    "accounts.apps.AccountsConfig",
+    "cotisationtontine.apps.CotisationtontineConfig",
+    "epargnecredit",
+    "pilotage",
+    "legal",
+]
+
+# Le serveur SSL Django est réservé au développement local.
+if DEBUG:
+    INSTALLED_APPS.append("sslserver")
+
+
+# ==========================================================
+# MIDDLEWARE
+# ==========================================================
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
+    "django.contrib.sessions.middleware.SessionMiddleware",
+
+    # CORS doit être placé avant CommonMiddleware.
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+
+    "legal.middleware.TermsGateMiddleware",
+]
+
+
+# ==========================================================
+# URLS ET SERVEURS
+# ==========================================================
+
+ROOT_URLCONF = "yaayess.urls"
+
+WSGI_APPLICATION = "yaayess.wsgi.application"
+
+
+# ==========================================================
+# TEMPLATES
+# ==========================================================
+
+TEMPLATES = [
+    {
+        "BACKEND": (
+            "django.template.backends.django."
+            "DjangoTemplates"
+        ),
+        "DIRS": [
+            BASE_DIR / "templates",
+        ],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                (
+                    "django.template.context_processors."
+                    "debug"
+                ),
+                (
+                    "django.template.context_processors."
+                    "request"
+                ),
+                (
+                    "django.template.context_processors."
+                    "csrf"
+                ),
+                (
+                    "django.contrib.auth.context_processors."
+                    "auth"
+                ),
+                (
+                    "django.contrib.messages.context_processors."
+                    "messages"
+                ),
+            ],
+        },
+    },
+]
+
+
+# ==========================================================
+# UTILISATEUR ET AUTHENTIFICATION
+# ==========================================================
+
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+AUTHENTICATION_BACKENDS = [
+    "accounts.auth_backend.PhoneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/tontine/dashboard/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+
+# ==========================================================
+# SESSION
+# ==========================================================
+
+SESSION_COOKIE_AGE = 3600
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_SECURE = False  # True en production HTTPS
+
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 
-# PROD security (activés automatiquement quand DEBUG=False)
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = True
-#    SESSION_COOKIE_SECURE = True
-#    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
 
-DEBUG = True
+# ==========================================================
+# CSRF
+# ==========================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
+    "https://yaayess-ngen.shop",
+    "https://www.yaayess-ngen.shop",
 ]
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+        "http://127.0.0.1",
+        "http://127.0.0.1:8000",
+        "http://localhost",
+        "http://localhost:8000",
+        "http://localhost:3000",
+    ]
+
+CSRF_COOKIE_SAMESITE = "Lax"
 
 
-# sécurité production
-if not DEBUG:
+# ==========================================================
+# SÉCURITÉ HTTPS
+# ==========================================================
 
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# Permet à Django de reconnaître HTTPS derrière Nginx.
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+SECURE_REFERRER_POLICY = "same-origin"
+
+if DEBUG:
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    SECURE_SSL_REDIRECT = False
+
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+
+else:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
     SECURE_SSL_REDIRECT = True
-
-    SESSION_COOKIE_SECURE = True
-
-    CSRF_COOKIE_SECURE = True
 
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# ----------------------------------------------------
-# 🌍 OPENAI
-# ----------------------------------------------------
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# ==========================================================
+# DJANGO REST FRAMEWORK
+# ==========================================================
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        (
+            "rest_framework_simplejwt."
+            "authentication.JWTAuthentication"
+        ),
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+}
 
 
-# ----------------------------------------------------
-# 📦 INSTALLED APPS (inchangé)
-# ----------------------------------------------------
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.humanize',
-    "django_countries",
-    # Apps locales
-    'cotisationtontine.apps.CotisationtontineConfig',
-    'pilotage',
-
-    'epargnecredit',
-    'legal',
-    'rest_framework',
-    'widget_tweaks',
-
-
-    # Outils
-    'whitenoise.runserver_nostatic',
-    'sslserver',
-    "corsheaders",
-    'rest_framework_simplejwt.token_blacklist',
-    'accounts.apps.AccountsConfig',
-
-
-]
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-
+# ==========================================================
+# JWT
+# ==========================================================
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=15,
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=7,
+    ),
 
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -152,174 +344,172 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
 
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-
-
-CORS_ALLOW_ALL_ORIGINS = True
-
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
+    "AUTH_HEADER_TYPES": (
+        "Bearer",
     ),
 }
 
 
-# SIMPLE_JWT = {
-#    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-#    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-#    'AUTH_HEADER_TYPES': ('Bearer',),
-#}
+# ==========================================================
+# CORS
+# ==========================================================
 
-AUTH_USER_MODEL = "accounts.CustomUser"
+# Autorisation large uniquement en développement.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = env_list(
+        "CORS_ALLOWED_ORIGINS",
+        default=(
+            "https://yaayess-ngen.shop,"
+            "https://www.yaayess-ngen.shop"
+        ),
+    )
 
-TERMS_VERSION = "v1.0-2025-09-07"
-
-
-AUTHENTICATION_BACKENDS = [
-    "accounts.backends.PhoneBackend",
-    "django.contrib.auth.backends.ModelBackend",
-]
-
-# ----------------------------------------------------
-# ⚙️ MIDDLEWARE
-# ----------------------------------------------------
-
-MIDDLEWARE = [
-
-    'django.middleware.security.SecurityMiddleware',
-
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-
-    'django.contrib.sessions.middleware.SessionMiddleware',
-
-    'corsheaders.middleware.CorsMiddleware',
-
-    'django.middleware.common.CommonMiddleware',
-
-    'django.middleware.csrf.CsrfViewMiddleware',
-
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-
-    'django.contrib.messages.middleware.MessageMiddleware',
-
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-    "legal.middleware.TermsGateMiddleware",
-
-]
-
-ROOT_URLCONF = 'yaayess.urls'
-WSGI_APPLICATION = 'yaayess.wsgi.application'
-
-# Templates : vérifie bien l’entrée DIRS → "templates/"
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],   # ✅ important pour templates/assistant_ai/...
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.template.context_processors.csrf",  # ✅
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
-]
-
-# EMAIL
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'tonemail@gmail.com'
-EMAIL_HOST_PASSWORD = 'mot_de_passe'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+CORS_ALLOW_CREDENTIALS = True
 
 
+# ==========================================================
+# EMAIL — BREVO
+# ==========================================================
+
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+
+EMAIL_HOST = os.getenv(
+    "EMAIL_HOST",
+    "smtp-relay.brevo.com",
+)
+
+EMAIL_PORT = int(
+    os.getenv(
+        "EMAIL_PORT",
+        "587",
+    )
+)
+
+EMAIL_USE_TLS = env_bool(
+    "EMAIL_USE_TLS",
+    default=True,
+)
+
+EMAIL_USE_SSL = env_bool(
+    "EMAIL_USE_SSL",
+    default=False,
+)
+
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER",
+    "",
+)
+
+EMAIL_HOST_PASSWORD = os.getenv(
+    "BREVO_SMTP_KEY",
+    "",
+)
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "no-reply@yaayess-ngen.shop",
+)
+
+
+# ==========================================================
 # TWILIO
-TWILIO_ACCOUNT_SID = "xxxx"
-TWILIO_AUTH_TOKEN = "xxxx"
-TWILIO_PHONE_NUMBER = "+123456789"
+# ==========================================================
+
+TWILIO_ACCOUNT_SID = os.getenv(
+    "TWILIO_ACCOUNT_SID",
+    "",
+)
+
+TWILIO_AUTH_TOKEN = os.getenv(
+    "TWILIO_AUTH_TOKEN",
+    "",
+)
+
+TWILIO_PHONE_NUMBER = os.getenv(
+    "TWILIO_PHONE_NUMBER",
+    "",
+)
 
 
+# ==========================================================
+# INTERNATIONALISATION
+# ==========================================================
 
-# ----------------------------------------------------
-# 🔑 AUTHENTICATION
-# ----------------------------------------------------
+LANGUAGE_CODE = "fr-fr"
 
-#AUTH_USER_MODEL = 'accounts.CustomUser'
-#LOGIN_URL = '/login/'
-#LOGIN_REDIRECT_URL = '/'
-#LOGOUT_REDIRECT_URL = '/'
+TIME_ZONE = "Africa/Dakar"
 
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/tontine/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
-
-
-# ----------------------------------------------------
-# 🌍 INTERNATIONALIZATION
-# ----------------------------------------------------
-LANGUAGE_CODE = 'fr-fr'
-TIME_ZONE = 'Africa/Dakar'
 USE_I18N = True
 USE_TZ = True
 
-# ----------------------------------------------------
-# 📁 STATIC & MEDIA FILES
-# ----------------------------------------------------
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# ==========================================================
+# FICHIERS STATIQUES
+# ==========================================================
 
+STATIC_URL = "/static/"
 
-# ----------------------------------------------------
-# 🔒 SECURITY HEADERS (Production)
-# ----------------------------------------------------
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# AUTHENTICATION_BACKENDS = [
-#    'accounts.backends.NomBackend',
-#]
-AUTHENTICATION_BACKENDS = [
-    'accounts.auth_backend.PhoneBackend',
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
 ]
 
-
-# settings.py
-LOGIN_URL = '/accounts/login/'          # redirection pour utilisateurs non connectés
-LOGIN_REDIRECT_URL = '/groups/'         # redirection après login réussi
-
-# Uploads audio (sécu & confort)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024  # 15 Mo
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 Mo
-
-
-# Dev only: servir /media
-if DEBUG:
-    from django.conf.urls.static import static
-    from django.conf import settings as _s
-    urlpatterns = []
-    urlpatterns += static(_s.MEDIA_URL, document_root=_s.MEDIA_ROOT)
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "django.core.files.storage."
+            "FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage."
+            "CompressedManifestStaticFilesStorage"
+        ),
+    },
+}
 
 
+# ==========================================================
+# FICHIERS MÉDIAS
+# ==========================================================
+
+MEDIA_URL = "/media/"
+
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+# ==========================================================
+# LIMITES D'UPLOAD
+# ==========================================================
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = (
+    15 * 1024 * 1024
+)
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = (
+    10 * 1024 * 1024
+)
+
+
+# ==========================================================
+# CONDITIONS GÉNÉRALES
+# ==========================================================
+
+TERMS_VERSION = os.getenv(
+    "TERMS_VERSION",
+    "v1.0-2025-09-07",
+)
+
+
+# ==========================================================
+# MODÈLES DJANGO
+# ==========================================================
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
