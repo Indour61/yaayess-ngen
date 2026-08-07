@@ -5,251 +5,433 @@
 
 {% block content %}
 <div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8 col-12">
 
-<div class="row justify-content-center">
-<div class="col-lg-6 col-md-8 col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
 
-<div class="card shadow-sm border-0">
+                    <h4 class="mb-3 fw-bold text-success">
+                        💳 Effectuer un versement
+                    </h4>
 
-<div class="card-body">
+                    <p class="text-muted mb-4">
+                        Pour :
+                        <strong>
+                            {{ member.user.nom|default:member.user.phone }}
+                        </strong>
 
-<h4 class="mb-3 fw-bold text-success">
-💳 Effectuer un versement
-</h4>
+                        {% if member.group %}
+                            <br>
+                            <span class="small">
+                                Groupe :
+                                <strong>{{ member.group.nom }}</strong>
+                            </span>
+                        {% endif %}
+                    </p>
 
-<p class="text-muted mb-4">
+                    <form
+                        method="post"
+                        id="versement-form"
+                        class="needs-validation"
+                        novalidate
+                        autocomplete="off"
+                    >
+                        {% csrf_token %}
 
-Pour :
+                        <!-- Mode de versement -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                Mode de versement
+                            </label>
 
-<strong>
-{{ member.user.nom|default:member.user.phone }}
-</strong>
+                            <div class="row g-3">
 
-{% if member.group %}
-<br>
-<span class="small">
-Groupe : <strong>{{ member.group.nom }}</strong>
-</span>
-{% endif %}
+                                <div class="col-sm-6">
+                                    <input
+                                        type="radio"
+                                        class="btn-check"
+                                        name="methode"
+                                        id="methode-paydunya"
+                                        value="PAYDUNYA"
+                                        autocomplete="off"
+                                        checked
+                                    >
 
-</p>
+                                    <label
+                                        class="btn btn-outline-success w-100 h-100 p-3"
+                                        for="methode-paydunya"
+                                    >
+                                        <span class="d-block fs-3 mb-1">
+                                            💳
+                                        </span>
 
-<form method="post"
-      id="versement-form"
-      class="needs-validation"
-      novalidate
-      autocomplete="off">
+                                        <strong class="d-block">
+                                            PayDunya
+                                        </strong>
 
-{% csrf_token %}
+                                        <small class="d-block mt-1">
+                                            Paiement en ligne sécurisé
+                                        </small>
+                                    </label>
+                                </div>
 
-<input type="hidden" name="methode" value="paydunya"/>
+                                <div class="col-sm-6">
+                                    <input
+                                        type="radio"
+                                        class="btn-check"
+                                        name="methode"
+                                        id="methode-caisse"
+                                        value="CAISSE"
+                                        autocomplete="off"
+                                    >
 
-<!-- Montant -->
-<div class="mb-3">
+                                    <label
+                                        class="btn btn-outline-secondary w-100 h-100 p-3"
+                                        for="methode-caisse"
+                                    >
+                                        <span class="d-block fs-3 mb-1">
+                                            💵
+                                        </span>
 
-<label for="montant" class="form-label fw-semibold">
-Montant à verser (FCFA)
-</label>
+                                        <strong class="d-block">
+                                            Caisse
+                                        </strong>
 
-<input
-type="number"
-class="form-control form-control-lg"
-name="montant"
-id="montant"
-min="1"
-step="1"
-required
-placeholder="Ex : 5 000">
+                                        <small class="d-block mt-1">
+                                            Versement manuel à valider
+                                        </small>
+                                    </label>
+                                </div>
 
-<div class="form-text">
-Montant minimum : 1 FCFA
+                            </div>
+                        </div>
+
+                        <!-- Montant -->
+                        <div class="mb-3">
+                            <label
+                                for="montant"
+                                class="form-label fw-semibold"
+                            >
+                                Montant à verser (FCFA)
+                            </label>
+
+                            <input
+                                type="number"
+                                class="form-control form-control-lg"
+                                name="montant"
+                                id="montant"
+                                min="1"
+                                step="1"
+                                inputmode="numeric"
+                                required
+                                autofocus
+                                placeholder="Ex. : 5000"
+                                aria-describedby="montant-aide"
+                            >
+
+                            <div
+                                id="montant-aide"
+                                class="form-text"
+                            >
+                                Montant minimum : 1 FCFA.
+                            </div>
+
+                            <div class="invalid-feedback">
+                                Veuillez saisir un montant entier supérieur
+                                à zéro.
+                            </div>
+                        </div>
+
+                        <!-- Récapitulatif -->
+                        <div
+                            class="card bg-light border-0 mb-3"
+                            id="total-section"
+                            hidden
+                        >
+                            <div class="card-body">
+
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>
+                                        💰 Montant du versement
+                                    </span>
+
+                                    <strong id="montant-affiche">
+                                        0 FCFA
+                                    </strong>
+                                </div>
+
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">
+                                        Frais plateforme
+                                        ({{ taux_frais_plateforme|default:"1.00" }} %)
+                                    </span>
+
+                                    <strong id="frais-affiche">
+                                        0 FCFA
+                                    </strong>
+                                </div>
+
+                                <hr>
+
+                                <div
+                                    class="d-flex justify-content-between align-items-center"
+                                >
+                                    <strong>
+                                        Total
+                                    </strong>
+
+                                    <strong
+                                        id="total-affiche"
+                                        class="text-success fs-5"
+                                    >
+                                        0 FCFA
+                                    </strong>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Information PayDunya -->
+                        <div
+                            class="alert alert-info small"
+                            id="info-paydunya"
+                            role="alert"
+                        >
+                            Vous serez redirigé vers la plateforme sécurisée
+                            PayDunya pour terminer le paiement.
+                        </div>
+
+                        <!-- Information caisse -->
+                        <div
+                            class="alert alert-warning small"
+                            id="info-caisse"
+                            role="alert"
+                            hidden
+                        >
+                            Le versement en caisse sera enregistré avec le
+                            statut « En attente ». Il devra être validé par
+                            l’administrateur du groupe.
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+
+                            <button
+                                type="submit"
+                                class="btn btn-success flex-grow-1"
+                                id="submit-btn"
+                            >
+                                <span id="submit-label">
+                                    💳 Payer avec PayDunya
+                                </span>
+
+                                <span
+                                    id="submit-loading"
+                                    class="d-none"
+                                >
+                                    <span
+                                        class="spinner-border spinner-border-sm me-2"
+                                        aria-hidden="true"
+                                    ></span>
+
+                                    Traitement...
+                                </span>
+                            </button>
+
+                            <a
+                                href="{% url 'epargnecredit:group_detail' group_id=member.group.id %}"
+                                class="btn btn-outline-secondary"
+                            >
+                                Annuler
+                            </a>
+
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
-
-<div class="invalid-feedback">
-Veuillez saisir un montant valide.
-</div>
-
-</div>
-
-<!-- TOTAL -->
-<div class="card bg-light border-0 mb-3"
-     id="total-section"
-     style="display:none;">
-
-<div class="card-body">
-
-<div class="d-flex justify-content-between mb-2">
-
-<span>
-💰 Montant
-</span>
-
-<strong id="montant-affiche">
-0 FCFA
-</strong>
-
-</div>
-
-<div class="d-flex justify-content-between mb-2">
-
-<span class="text-muted">
-Frais plateforme (1%)
-</span>
-
-<strong id="frais">
-0 FCFA
-</strong>
-
-</div>
-
-<hr>
-
-<div class="d-flex justify-content-between">
-
-<strong>
-💳 Total à payer
-</strong>
-
-<strong id="total" class="text-success fs-5">
-0 FCFA
-</strong>
-
-</div>
-
-</div>
-</div>
-
-<!-- Boutons -->
-<div class="d-flex flex-wrap gap-2 mt-3">
-
-<button type="submit"
-        class="btn btn-success flex-grow-1"
-        id="submit-btn">
-
-💳 Payer
-
-</button>
-
-<a href="{% url 'epargnecredit:group_detail' member.group.id %}"
-   class="btn btn-outline-secondary">
-
-Annuler
-
-</a>
-
-</div>
-
-</form>
-
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-
 
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
 
-// Validation Bootstrap
+    const form = document.getElementById("versement-form");
+    const montantInput = document.getElementById("montant");
 
-(() => {
+    const methodePaydunya =
+        document.getElementById("methode-paydunya");
 
-'use strict';
+    const methodeCaisse =
+        document.getElementById("methode-caisse");
 
-const form = document.getElementById('versement-form');
-const submitBtn = document.getElementById('submit-btn');
+    const totalSection =
+        document.getElementById("total-section");
 
-form.addEventListener('submit', function(event){
+    const montantAffiche =
+        document.getElementById("montant-affiche");
 
-if(!form.checkValidity()){
+    const fraisAffiche =
+        document.getElementById("frais-affiche");
 
-event.preventDefault();
-event.stopPropagation();
+    const totalAffiche =
+        document.getElementById("total-affiche");
 
-}else{
+    const infoPaydunya =
+        document.getElementById("info-paydunya");
 
-submitBtn.disabled = true;
-submitBtn.innerText = "Traitement...";
+    const infoCaisse =
+        document.getElementById("info-caisse");
 
-}
+    const submitBtn =
+        document.getElementById("submit-btn");
 
-form.classList.add('was-validated');
+    const submitLabel =
+        document.getElementById("submit-label");
 
-}, false);
+    const submitLoading =
+        document.getElementById("submit-loading");
 
-})();
+    const tauxFrais = Number(
+        "{{ taux_frais_plateforme|default:'1.00' }}"
+            .replace(",", ".")
+    );
 
+    const formatMontant = new Intl.NumberFormat(
+        "fr-FR",
+        {
+            maximumFractionDigits: 0
+        }
+    );
 
-// Calcul frais
+    function arrondirFCFA(valeur) {
+        const nombre = Number(valeur);
 
-document.addEventListener('DOMContentLoaded', function(){
+        if (!Number.isFinite(nombre)) {
+            return 0;
+        }
 
-const montantInput = document.getElementById('montant');
+        return Math.round(nombre);
+    }
 
-const montantAffiche = document.getElementById('montant-affiche');
-const fraisEl = document.getElementById('frais');
-const totalEl = document.getElementById('total');
+    function methodeSelectionnee() {
+        return methodePaydunya.checked
+            ? "PAYDUNYA"
+            : "CAISSE";
+    }
 
-const totalSection = document.getElementById('total-section');
+    function mettreAJourInterface() {
+        const methode = methodeSelectionnee();
+        const valeur = Number(montantInput.value);
 
-const fmt = new Intl.NumberFormat('fr-FR');
+        const montant = valeur > 0
+            ? arrondirFCFA(valeur)
+            : 0;
 
-function arrondi(x){
+        const frais = montant > 0
+            ? arrondirFCFA(
+                montant * tauxFrais / 100
+            )
+            : 0;
 
-const n = Number(x);
-return Number.isFinite(n) ? Math.round(n) : 0;
+        const total = montant + frais;
 
-}
+        if (montant > 0) {
+            montantAffiche.textContent =
+                formatMontant.format(montant) + " FCFA";
 
-function updateTotal(){
+            fraisAffiche.textContent =
+                formatMontant.format(frais) + " FCFA";
 
-const v = parseFloat(montantInput.value);
+            totalAffiche.textContent =
+                formatMontant.format(total) + " FCFA";
 
-const montant = (!isNaN(v) && v > 0) ? arrondi(v) : 0;
+            totalSection.hidden = false;
+        } else {
+            montantAffiche.textContent = "0 FCFA";
+            fraisAffiche.textContent = "0 FCFA";
+            totalAffiche.textContent = "0 FCFA";
+            totalSection.hidden = true;
+        }
 
-if(montant > 0){
+        if (methode === "PAYDUNYA") {
+            infoPaydunya.hidden = false;
+            infoCaisse.hidden = true;
 
-// frais 1%
+            submitLabel.textContent =
+                "💳 Payer avec PayDunya";
+        } else {
+            infoPaydunya.hidden = true;
+            infoCaisse.hidden = false;
 
-const frais = Math.round(montant * 0.01);
+            submitLabel.textContent =
+                "💵 Enregistrer le versement en caisse";
+        }
+    }
 
-const total = montant + frais;
+    montantInput.addEventListener(
+        "input",
+        mettreAJourInterface
+    );
 
-montantAffiche.textContent = fmt.format(montant) + " FCFA";
-fraisEl.textContent = fmt.format(frais) + " FCFA";
-totalEl.textContent = fmt.format(total) + " FCFA";
+    montantInput.addEventListener(
+        "blur",
+        function () {
+            const valeur = Number(montantInput.value);
 
-totalSection.style.display = "block";
+            if (
+                Number.isFinite(valeur)
+                && valeur > 0
+            ) {
+                montantInput.value =
+                    arrondirFCFA(valeur);
+            }
 
-}else{
+            mettreAJourInterface();
+        }
+    );
 
-totalSection.style.display = "none";
+    methodePaydunya.addEventListener(
+        "change",
+        mettreAJourInterface
+    );
 
-}
+    methodeCaisse.addEventListener(
+        "change",
+        mettreAJourInterface
+    );
 
-}
+    form.addEventListener(
+        "submit",
+        function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
 
-montantInput.addEventListener("input", updateTotal);
+                form.classList.add(
+                    "was-validated"
+                );
 
-montantInput.addEventListener("blur", function(){
+                return;
+            }
 
-const v = parseFloat(montantInput.value);
+            submitBtn.disabled = true;
+            submitLabel.classList.add("d-none");
+            submitLoading.classList.remove("d-none");
 
-if(!isNaN(v) && v > 0){
+            form.classList.add(
+                "was-validated"
+            );
+        },
+        false
+    );
 
-montantInput.value = arrondi(v);
-
-}
-
+    mettreAJourInterface();
 });
-
-updateTotal();
-
-});
-
 </script>
-
 {% endblock %}
-
