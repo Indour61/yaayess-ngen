@@ -242,42 +242,83 @@
          VERSEMENTS EN ATTENTE
          ===================================================== -->
 
-    {% if user_is_admin %}
-        <div class="card shadow-sm mb-4 border-warning">
-            <div class="card-header bg-warning text-dark fw-bold">
-                💰 Versements en attente
-            </div>
+   {% if user_is_admin %}
+    <div class="card shadow-sm mb-4 border-warning">
+        <div class="card-header bg-warning text-dark fw-bold">
+            💰 Versements en attente
+        </div>
 
-            <div class="card-body">
+        <div class="card-body">
 
-                {% for v in versements_en_attente_liste %}
-                    <div
-                        class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom py-3"
-                    >
-                        <div>
-                            <strong>
-                                {{ v.member.user.nom|default:v.member.user.phone }}
-                            </strong>
+            {% for v in versements_en_attente_liste %}
+                <div
+                    class="d-flex justify-content-between align-items-center flex-wrap gap-3 border-bottom py-3"
+                >
+                    <div>
+                        <strong>
+                            {{ v.member.user.nom|default:v.member.user.phone }}
+                        </strong>
 
+                        <br>
+
+                        <small>
+                            {{ v.montant|intcomma }} FCFA
+                        </small>
+
+                        {% if v.methode %}
                             <br>
 
-                            <small>
-                                {{ v.montant|intcomma }} FCFA
+                            <small class="text-muted">
+                                Mode :
+                                <strong>
+                                    {{ v.get_methode_display|default:v.methode }}
+                                </strong>
                             </small>
-                        </div>
+                        {% endif %}
+                    </div>
 
-                        <div class="d-flex gap-2 flex-wrap">
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
 
-                            {% if v.preuve %}
-                                <a
-                                    href="{{ v.preuve.url }}"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="btn btn-sm btn-info"
-                                >
-                                    👁 Preuve
-                                </a>
+                        {% if v.preuve %}
+                            <a
+                                href="{{ v.preuve.url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="btn btn-sm btn-info"
+                            >
+                                👁 Preuve
+                            </a>
+                        {% endif %}
+
+                        {% if v.methode == "PAYDUNYA" %}
+
+                            {% if v.paydunya_status == "pending" %}
+                                <span class="badge bg-info text-dark p-2">
+                                    💳 En attente de confirmation PayDunya
+                                </span>
+
+                            {% elif v.paydunya_status == "completed" %}
+                                <span class="badge bg-success p-2">
+                                    ✅ Paiement PayDunya confirmé
+                                </span>
+
+                            {% elif v.paydunya_status == "cancelled" %}
+                                <span class="badge bg-secondary p-2">
+                                    ⚠️ Paiement PayDunya annulé
+                                </span>
+
+                            {% elif v.paydunya_status == "failed" %}
+                                <span class="badge bg-danger p-2">
+                                    ❌ Paiement PayDunya échoué
+                                </span>
+
+                            {% else %}
+                                <span class="badge bg-warning text-dark p-2">
+                                    💳 Vérification PayDunya en cours
+                                </span>
                             {% endif %}
+
+                        {% else %}
 
                             <form
                                 method="post"
@@ -317,19 +358,20 @@
                                 </button>
                             </form>
 
-                        </div>
+                        {% endif %}
+
                     </div>
+                </div>
 
-                {% empty %}
-                    <p class="text-muted mb-0">
-                        Aucun versement en attente
-                    </p>
-                {% endfor %}
+            {% empty %}
+                <p class="text-muted mb-0">
+                    Aucun versement en attente
+                </p>
+            {% endfor %}
 
-            </div>
         </div>
-    {% endif %}
-
+    </div>
+{% endif %}
 
     <!-- =====================================================
          ACTIONS DU GROUPE

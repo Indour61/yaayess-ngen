@@ -314,6 +314,10 @@ def validate_invoice_amount(
 
 def build_invoice_payload(
     versement: Versement,
+    *,
+    return_url: str = "",
+    cancel_url: str = "",
+    callback_url: str = "",
 ) -> dict[str, Any]:
     member = versement.member
     group = member.group
@@ -369,7 +373,7 @@ def build_invoice_payload(
             },
             "taxes": {
                 "tax_0": {
-                    "name": "Frais de service YAAYESS (2 %)",
+                    "name": "Frais de service YAAYESS (3 %)",
                     "amount": int(frais),
                 },
             },
@@ -421,20 +425,38 @@ def build_invoice_payload(
             "frais_yaayess": int(frais),
         },
         "actions": {
-            "return_url": getattr(
-                settings,
-                "PAYDUNYA_RETURN_URL",
-                "",
+            "return_url": (
+                str(return_url or "").strip()
+                or str(
+                    getattr(
+                        settings,
+                        "PAYDUNYA_RETURN_URL",
+                        "",
+                    )
+                    or ""
+                ).strip()
             ),
-            "cancel_url": getattr(
-                settings,
-                "PAYDUNYA_CANCEL_URL",
-                "",
+            "cancel_url": (
+                str(cancel_url or "").strip()
+                or str(
+                    getattr(
+                        settings,
+                        "PAYDUNYA_CANCEL_URL",
+                        "",
+                    )
+                    or ""
+                ).strip()
             ),
-            "callback_url": getattr(
-                settings,
-                "PAYDUNYA_CALLBACK_URL",
-                "",
+            "callback_url": (
+                str(callback_url or "").strip()
+                or str(
+                    getattr(
+                        settings,
+                        "PAYDUNYA_CALLBACK_URL",
+                        "",
+                    )
+                    or ""
+                ).strip()
             ),
         },
     }
@@ -449,6 +471,10 @@ def build_invoice_payload(
 @transaction.atomic
 def create_checkout_invoice(
     versement: Versement,
+    *,
+    return_url: str = "",
+    cancel_url: str = "",
+    callback_url: str = "",
 ) -> tuple[str, str, dict[str, Any]]:
     """
     Crée une facture PayDunya.
@@ -486,8 +512,31 @@ def create_checkout_invoice(
         )
 
     payload = build_invoice_payload(
-        versement
+        versement,
+        return_url=return_url,
+        cancel_url=cancel_url,
+        callback_url=callback_url,
     )
+
+    actions = payload.get("actions") or {}
+
+    if not actions.get("return_url"):
+        raise PayDunyaConfigurationError(
+            "L'URL de retour PayDunya est absente."
+        )
+
+    if not actions.get("cancel_url"):
+        raise PayDunyaConfigurationError(
+            "L'URL d'annulation PayDunya est absente."
+        )
+
+    if (
+        get_paydunya_mode() == "live"
+        and not actions.get("callback_url")
+    ):
+        raise PayDunyaConfigurationError(
+            "L'URL callback PayDunya est absente en mode live."
+        )
 
     try:
         response = requests.post(

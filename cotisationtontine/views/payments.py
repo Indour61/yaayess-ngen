@@ -131,7 +131,7 @@ def initier_versement(request, member_id):
 
     if request.method == "GET":
         frais = (
-            reste * Decimal("0.02")
+                reste * Decimal("0.03")
         ).quantize(
             Decimal("1"),
             rounding=ROUND_HALF_UP,
@@ -287,11 +287,18 @@ def valider_versement(request, versement_id):
     versement = get_object_or_404(
         Versement.objects
         .select_for_update()
-        .select_related("member__group"),
+        .select_related(
+            "member",
+            "member__group",
+        ),
         id=versement_id,
     )
 
     group = versement.member.group
+
+    # ======================================================
+    # Permissions
+    # ======================================================
 
     if request.user != group.admin and not request.user.is_superuser:
         messages.error(
@@ -303,6 +310,29 @@ def valider_versement(request, versement_id):
             group_id=group.id,
         )
 
+    # ======================================================
+    # Protection PayDunya
+    # ======================================================
+
+    if versement.methode == "PAYDUNYA":
+        messages.error(
+            request,
+            (
+                "Un versement PayDunya ne peut pas être "
+                "validé manuellement. "
+                "La validation doit être confirmée "
+                "automatiquement par PayDunya."
+            ),
+        )
+        return redirect(
+            "cotisationtontine:group_detail",
+            group_id=group.id,
+        )
+
+    # ======================================================
+    # Déjà validé
+    # ======================================================
+
     if versement.statut == "VALIDE":
         messages.info(
             request,
@@ -312,6 +342,10 @@ def valider_versement(request, versement_id):
             "cotisationtontine:group_detail",
             group_id=group.id,
         )
+
+    # ======================================================
+    # Déjà refusé
+    # ======================================================
 
     if versement.statut == "REFUSE":
         messages.error(
@@ -325,6 +359,10 @@ def valider_versement(request, versement_id):
             "cotisationtontine:group_detail",
             group_id=group.id,
         )
+
+    # ======================================================
+    # Validation manuelle
+    # ======================================================
 
     versement.statut = "VALIDE"
     versement.valide_par = request.user
@@ -347,7 +385,6 @@ def valider_versement(request, versement_id):
         "cotisationtontine:group_detail",
         group_id=group.id,
     )
-
 
 # ==========================================================
 # REFUS ADMINISTRATEUR

@@ -1,35 +1,27 @@
 import hashlib
 import json
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 import requests
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Sum
 from django.http import (
     HttpRequest,
     HttpResponse,
     HttpResponseBadRequest,
     JsonResponse,
 )
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-
-from cotisationtontine.models import Versement
-
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.db.models import Sum
-from django.shortcuts import get_object_or_404, redirect
-from django.views.decorators.http import require_POST
 
 from cotisationtontine.models import GroupMember, Versement
 from cotisationtontine.services.paydunya_service import (
@@ -37,6 +29,7 @@ from cotisationtontine.services.paydunya_service import (
     PayDunyaConfigurationError,
     create_checkout_invoice,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -940,6 +933,28 @@ def paydunya_initier(request, member_id):
         )
 
     # ======================================================
+    # MONTANT MINIMUM PAYDUNYA
+    # ======================================================
+
+    MONTANT_MINIMUM_PAYDUNYA = Decimal("1000")
+
+    if montant < MONTANT_MINIMUM_PAYDUNYA:
+        messages.error(
+            request,
+            (
+                "Le montant minimum pour un paiement PayDunya "
+                "est de 1 000 FCFA. "
+                "Pour un montant inférieur, veuillez utiliser "
+                "le paiement en caisse."
+            ),
+        )
+
+        return redirect(
+            "cotisationtontine:initier_versement",
+            member_id=member.id,
+        )
+
+    # ======================================================
     # CALCUL DU RESTE À PAYER
     # ======================================================
 
@@ -988,7 +1003,7 @@ def paydunya_initier(request, member_id):
     # ======================================================
 
     frais = (
-        montant * Decimal("0.02")
+        montant * Decimal("0.03")
     ).quantize(
         Decimal("1"),
         rounding=ROUND_HALF_UP,
@@ -1013,9 +1028,44 @@ def paydunya_initier(request, member_id):
     # CRÉATION DE LA FACTURE PAYDUNYA
     # ======================================================
 
+    return_url = request.build_absolute_uri(
+        reverse(
+            "cotisationtontine:paydunya_return"
+        )
+    )
+
+    cancel_url = request.build_absolute_uri(
+        reverse(
+            "cotisationtontine:paydunya_cancel"
+        )
+    )
+
+    callback_url = request.build_absolute_uri(
+        reverse(
+            "cotisationtontine:paydunya_callback"
+        )
+    )
+
+    logger.info(
+        (
+            "Initialisation PayDunya. "
+            "versement_id=%s return_url=%s "
+            "cancel_url=%s callback_url=%s"
+        ),
+        versement.id,
+        return_url,
+        cancel_url,
+        callback_url,
+    )
+
     try:
         token, checkout_url, response_payload = (
-            create_checkout_invoice(versement)
+            create_checkout_invoice(
+                versement=versement,
+                return_url=return_url,
+                cancel_url=cancel_url,
+                callback_url=callback_url,
+            )
         )
 
     except PayDunyaConfigurationError as exc:
@@ -1045,11 +1095,18 @@ def paydunya_initier(request, member_id):
         )
 
     except Exception:
+        logger.exception(
+            "Erreur technique pendant l'initialisation PayDunya."
+        )
+
         versement.delete()
 
         messages.error(
             request,
-            "Une erreur technique est survenue pendant l'initialisation du paiement.",
+            (
+                "Une erreur technique est survenue pendant "
+                "l'initialisation du paiement."
+            ),
         )
 
         return redirect(

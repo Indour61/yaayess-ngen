@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Résultat du paiement PayDunya{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4 text-center">
+
+                    {% if payment_status == "completed" %}
+
+                        <div class="display-4 text-success mb-3">
+                            ✅
+                        </div>
+
+                        <h3 class="text-success fw-bold">
+                            Paiement confirmé
+                        </h3>
+
+                        <p class="text-muted">
+                            Votre versement PayDunya a été confirmé avec succès.
+                        </p>
+
+                    {% elif payment_status == "pending" %}
+
+                        <div class="display-4 text-warning mb-3">
+                            ⏳
+                        </div>
+
+                        <h3 class="text-warning fw-bold">
+                            Paiement en cours de vérification
+                        </h3>
+
+                        <p class="text-muted">
+                            PayDunya n'a pas encore confirmé définitivement
+                            le paiement.
+                        </p>
+
+                    {% elif payment_status == "cancelled" %}
+
+                        <div class="display-4 text-secondary mb-3">
+                            ⚠️
+                        </div>
+
+                        <h3 class="text-secondary fw-bold">
+                            Paiement annulé
+                        </h3>
+
+                    {% elif payment_status == "failed" %}
+
+                        <div class="display-4 text-danger mb-3">
+                            ❌
+                        </div>
+
+                        <h3 class="text-danger fw-bold">
+                            Paiement échoué
+                        </h3>
+
+                    {% else %}
+
+                        <div class="display-4 text-danger mb-3">
+                            ⚠️
+                        </div>
+
+                        <h3 class="text-danger fw-bold">
+                            Impossible de confirmer le paiement
+                        </h3>
+
+                    {% endif %}
+
+                    {% if versement %}
+
+                        <hr class="my-4">
+
+                        <div class="text-start">
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Montant</span>
+                                <strong>
+                                    {{ versement.montant|intcomma }} FCFA
+                                </strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Frais YAAYESS</span>
+                                <strong>
+                                    {{ versement.frais|default:0|intcomma }} FCFA
+                                </strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Mode de paiement</span>
+                                <strong>
+                                    PayDunya
+                                </strong>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <span>Statut</span>
+                                <strong>
+                                    {{ versement.paydunya_status|default:"-" }}
+                                </strong>
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mt-4">
+
+                        {% if group %}
+                            <a
+                                href="{% url 'cotisationtontine:group_detail' group.id %}"
+                                class="btn btn-success"
+                            >
+                                Retour au groupe
+                            </a>
+                        {% else %}
+                            <a
+                                href="{% url 'cotisationtontine:dashboard_tontine_simple' %}"
+                                class="btn btn-success"
+                            >
+                                Retour au tableau de bord
+                            </a>
+                        {% endif %}
+
+                        {% if receipt_url %}
+                            <a
+                                href="{{ receipt_url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="btn btn-outline-primary"
+                            >
+                                Voir le reçu PayDunya
+                            </a>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -7,15 +7,10 @@
 
 <div class="container py-4">
 
-    <!-- =====================================================
-         MESSAGES
-         ===================================================== -->
-
     {% if messages %}
         {% for message in messages %}
             <div
-                class="alert alert-{{ message.tags|default:'info' }}
-                       alert-dismissible fade show"
+                class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
                 role="alert"
             >
                 {{ message }}
@@ -30,14 +25,8 @@
         {% endfor %}
     {% endif %}
 
-
-    <!-- =====================================================
-         EN-TÊTE
-         ===================================================== -->
-
     <div
-        class="d-flex align-items-center justify-content-between
-               flex-wrap gap-3 mb-3"
+        class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3"
     >
         <div>
             <h2 class="mb-1">
@@ -59,11 +48,6 @@
             ← Retour au groupe
         </a>
     </div>
-
-
-    <!-- =====================================================
-         INFORMATIONS DU GROUPE
-         ===================================================== -->
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
@@ -127,18 +111,13 @@
                     </small>
 
                     <strong>
-                        2 %
+                        3 %
                     </strong>
                 </div>
 
             </div>
         </div>
     </div>
-
-
-    <!-- =====================================================
-         INFORMATIONS SUR LE MODE DE PAIEMENT
-         ===================================================== -->
 
     <div
         id="payment-info"
@@ -148,11 +127,6 @@
         Vous serez redirigé vers la plateforme sécurisée PayDunya
         pour choisir Mobile Money ou carte bancaire.
     </div>
-
-
-    <!-- =====================================================
-         FORMULAIRE
-         ===================================================== -->
 
     <form
         method="post"
@@ -168,10 +142,6 @@
             <div class="card-body">
 
                 <div class="row g-4">
-
-                    <!-- =====================================
-                         MONTANT
-                         ===================================== -->
 
                     <div class="col-12 col-md-6">
 
@@ -218,11 +188,6 @@
 
                     </div>
 
-
-                    <!-- =====================================
-                         MÉTHODE DE PAIEMENT
-                         ===================================== -->
-
                     <div class="col-12 col-md-6">
 
                         <label
@@ -259,11 +224,6 @@
 
                 </div>
 
-
-                <!-- =========================================
-                     RÉCAPITULATIF
-                     ========================================= -->
-
                 <div
                     class="card bg-light border-0 mt-4"
                     id="resume-card"
@@ -294,7 +254,7 @@
 
                                     <tr>
                                         <td>
-                                            Frais YAAYESS — 2 %
+                                            Frais YAAYESS — 3 %
                                         </td>
 
                                         <td class="text-end text-warning">
@@ -326,14 +286,8 @@
                     </div>
                 </div>
 
-
-                <!-- =========================================
-                     ACTIONS
-                     ========================================= -->
-
                 <div
-                    class="d-flex align-items-center flex-wrap
-                           gap-2 mt-4"
+                    class="d-flex align-items-center flex-wrap gap-2 mt-4"
                 >
                     <button
                         type="submit"
@@ -370,7 +324,6 @@
     </form>
 
 </div>
-
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -411,6 +364,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const formatter = new Intl.NumberFormat("fr-FR");
 
+    const TAUX_FRAIS = 0.03;
+
 
     function updateTotal() {
         let montant = Number(montantInput.value);
@@ -426,7 +381,7 @@ document.addEventListener("DOMContentLoaded", function () {
         montant = Math.round(montant);
 
         const frais = Math.round(
-            montant * 0.02
+            montant * TAUX_FRAIS
         );
 
         const total = montant + frais;
