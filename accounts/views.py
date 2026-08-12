@@ -193,8 +193,14 @@ def verify_otp_view(request):
                 user.is_active = True
                 user.save()
 
-                # 🔐 login
-                login(request, user)
+                # 🔐 Connexion avec backend explicite
+                # Nécessaire car plusieurs AUTHENTICATION_BACKENDS
+                # sont configurés dans Django.
+                login(
+                    request,
+                    user,
+                    backend="accounts.auth_backend.PhoneBackend",
+                )
 
                 # 🧹 clean session
                 for key in ["otp", "phone", "otp_time"]:
@@ -518,7 +524,12 @@ def _resolve_group_by_code(code: str):
                 user.is_active = True
                 user.save()
 
-                login(request, user)
+
+                login(
+                    request,
+                    user,
+                    backend="accounts.auth_backend.PhoneBackend",
+                )
 
                 messages.success(request, "Compte validé ✅")
 
@@ -795,7 +806,11 @@ def inscription_et_rejoindre(request: HttpRequest, code: str) -> HttpResponse:
             if updated_fields:
                 user.save(update_fields=updated_fields)
 
-            login(request, user)
+            login(
+                request,
+                user,
+                backend="accounts.auth_backend.PhoneBackend",
+            )
             _add_member_to_group(request, user, group)
 
             messages.success(request, "Connexion réussie. Vous avez rejoint le groupe.")
@@ -821,7 +836,11 @@ def inscription_et_rejoindre(request: HttpRequest, code: str) -> HttpResponse:
             user.option = OPTION_EC
             user.save(update_fields=["is_validated", "option"])
 
-        login(request, user)
+        login(
+            request,
+            user,
+            backend="accounts.auth_backend.PhoneBackend",
+        )
         _add_member_to_group(request, user, group)
 
         messages.success(request, f"Compte créé avec succès. Bienvenue {nom} !")
@@ -1101,5 +1120,3 @@ def invoice_pdf(request, invoice_id):
         return HttpResponse("Erreur PDF ❌")
 
     return response
-
-

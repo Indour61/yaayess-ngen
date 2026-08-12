@@ -286,8 +286,13 @@
                 <button
                     id="submit_btn"
                     type="submit"
-                    disabled
-                    class="w-full bg-gray-200 border border-gray-300 text-gray-500 font-bold py-3 px-4 rounded-lg shadow-sm cursor-not-allowed transition"
+                    class="w-full font-bold py-3 px-4 rounded-lg shadow-sm cursor-pointer transition"
+                    style="
+                        background-color: #198754;
+                        color: #ffffff;
+                        border: 1px solid #198754;
+                        width: 100%;
+                    "
                 >
                     Créer mon compte
                 </button>
@@ -314,6 +319,16 @@
     </div>
 
 </div>
+
+
+<style>
+    #submit_btn:hover,
+    #submit_btn:focus {
+        background-color: #157347 !important;
+        border-color: #146c43 !important;
+        color: #ffffff !important;
+    }
+</style>
 
 {% endblock %}
 
@@ -350,7 +365,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /*
-     * Activation du bouton après acceptation des conditions.
+     * Le bouton reste toujours actif.
+     * La checkbox "accept_terms" possède déjà l'attribut required :
+     * le navigateur empêche donc l'envoi tant que les conditions
+     * ne sont pas acceptées.
      */
     function updateSubmitButton() {
 
@@ -358,40 +376,15 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        submitButton.disabled = !checkbox.checked;
-
         if (checkbox.checked) {
-
-            submitButton.classList.remove(
-                "bg-gray-200",
-                "border-gray-300",
-                "text-gray-500",
-                "cursor-not-allowed"
-            );
-
             submitButton.classList.add(
-                "bg-green-600",
-                "border-green-600",
-                "text-white",
-                "hover:bg-green-700",
-                "cursor-pointer"
+                "ring-2",
+                "ring-green-300"
             );
-
         } else {
-
             submitButton.classList.remove(
-                "bg-green-600",
-                "border-green-600",
-                "text-white",
-                "hover:bg-green-700",
-                "cursor-pointer"
-            );
-
-            submitButton.classList.add(
-                "bg-gray-200",
-                "border-gray-300",
-                "text-gray-500",
-                "cursor-not-allowed"
+                "ring-2",
+                "ring-green-300"
             );
         }
     }
